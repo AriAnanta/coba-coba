@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -25,6 +25,7 @@ import {
   Save as SaveIcon,
   Inventory as InventoryIcon,
 } from "@mui/icons-material";
+import supplierService from "../../api/supplierService";
 
 function CreateMaterial() {
   const [formData, setFormData] = useState({
@@ -46,6 +47,25 @@ function CreateMaterial() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  const [availableSuppliers, setAvailableSuppliers] = useState([]);
+  const [supplierLoading, setSupplierLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        setSupplierLoading(true);
+        const data = await supplierService.getAllSuppliers();
+        setAvailableSuppliers(data);
+      } catch (err) {
+        console.error("Error fetching suppliers:", err);
+        // setError("Failed to fetch suppliers"); // Consider showing this error to the user
+      } finally {
+        setSupplierLoading(false);
+      }
+    };
+    fetchSuppliers();
+  }, []);
 
   // Define ENUM values for dropdowns
   const categories = [
@@ -388,18 +408,27 @@ function CreateMaterial() {
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Supplier ID"
-                  name="supplierId"
-                  value={formData.supplierId}
-                  onChange={handleChange}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                    },
-                  }}
-                />
+                <FormControl fullWidth disabled={supplierLoading}>
+                  <InputLabel>Supplier</InputLabel>
+                  <Select
+                    name="supplierId"
+                    value={formData.supplierId}
+                    onChange={handleChange}
+                    label="Supplier"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
+                    }}
+                  >
+                    <MenuItem value="">Pilih Supplier</MenuItem>
+                    {availableSuppliers.map((supplier) => (
+                      <MenuItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
 
               <Grid item xs={12} sm={6}>

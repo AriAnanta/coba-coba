@@ -25,6 +25,7 @@ import {
   Save as SaveIcon,
   Inventory as InventoryIcon,
 } from "@mui/icons-material";
+import supplierService from "../../api/supplierService";
 
 function EditMaterial() {
   const { id } = useParams();
@@ -48,6 +49,9 @@ function EditMaterial() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  const [availableSuppliers, setAvailableSuppliers] = useState([]);
+  const [supplierLoading, setSupplierLoading] = useState(true);
 
   // Define ENUM values for dropdowns
   const categories = [
@@ -74,23 +78,30 @@ function EditMaterial() {
   ];
 
   useEffect(() => {
-    const fetchMaterial = async () => {
+    const fetchAllData = async () => {
       try {
-        const response = await fetch(
+        // Fetch material data
+        const materialResponse = await fetch(
           `http://localhost:5004/api/materials/${id}`
         );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!materialResponse.ok) {
+          throw new Error(`HTTP error! status: ${materialResponse.status}`);
         }
-        const data = await response.json();
-        setFormData(data);
+        const materialData = await materialResponse.json();
+        setFormData(materialData);
+
+        // Fetch suppliers data
+        setSupplierLoading(true);
+        const suppliersData = await supplierService.getAllSuppliers();
+        setAvailableSuppliers(suppliersData);
       } catch (e) {
         setError(e);
       } finally {
         setLoading(false);
+        setSupplierLoading(false);
       }
     };
-    fetchMaterial();
+    fetchAllData();
   }, [id]);
 
   const handleChange = (e) => {
@@ -439,18 +450,27 @@ function EditMaterial() {
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Supplier ID"
-                  name="supplierId"
-                  value={formData.supplierId || ""}
-                  onChange={handleChange}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                    },
-                  }}
-                />
+                <FormControl fullWidth disabled={supplierLoading || loading}>
+                  <InputLabel>Supplier</InputLabel>
+                  <Select
+                    name="supplierId"
+                    value={formData.supplierId || ""}
+                    onChange={handleChange}
+                    label="Supplier"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
+                    }}
+                  >
+                    <MenuItem value="">Pilih Supplier</MenuItem>
+                    {availableSuppliers.map((supplier) => (
+                      <MenuItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
 
               <Grid item xs={12} sm={6}>

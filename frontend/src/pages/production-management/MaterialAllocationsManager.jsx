@@ -38,6 +38,7 @@ import {
   Inventory as ConsumeIcon,
 } from "@mui/icons-material";
 import batchService from "../../api/batchService";
+import materialService from "../../api/materialService";
 
 const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
   const [materials, setMaterials] = useState([]);
@@ -52,15 +53,37 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
     quantityRequired: "",
     unitOfMeasure: "",
     notes: "",
+    stockQuantity: 0,
   });
   const [allocationData, setAllocationData] = useState({
     quantityAllocated: "",
   });
+  const [availableMaterials, setAvailableMaterials] = useState([]);
+  const [materialsLoading, setMaterialsLoading] = useState(true);
 
   useEffect(() => {
     if (batchId) {
       fetchMaterials();
     }
+  }, [batchId]);
+
+  useEffect(() => {
+    const fetchAvailableMaterials = async () => {
+      try {
+        setMaterialsLoading(true);
+        const data = await materialService.getAllMaterials();
+        setAvailableMaterials(data);
+        console.log("Fetched available materials:", data);
+        console.log("Materials loading status:", false);
+      } catch (err) {
+        console.error("Error fetching available materials:", err);
+        setError("Failed to fetch available materials");
+      } finally {
+        setMaterialsLoading(false);
+        console.log("Materials loading status in finally:", false);
+      }
+    };
+    fetchAvailableMaterials();
   }, [batchId]);
 
   const fetchMaterials = async () => {
@@ -172,11 +195,15 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
 
   const handleEditMaterial = (material) => {
     setEditingMaterial(material);
+    const selectedMaterial = availableMaterials.find(
+      (mat) => mat.id === material.materialId
+    );
     setFormData({
-      materialId: material.materialId.toString(),
+      materialId: String(material.materialId),
       quantityRequired: material.quantityRequired.toString(),
       unitOfMeasure: material.unitOfMeasure,
       notes: material.notes || "",
+      stockQuantity: selectedMaterial ? selectedMaterial.stockQuantity : 0,
     });
     setOpenDialog(true);
   };
@@ -187,6 +214,7 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
       quantityRequired: "",
       unitOfMeasure: "",
       notes: "",
+      stockQuantity: 0,
     });
     setEditingMaterial(null);
   };
@@ -208,6 +236,44 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
         sx={{ fontWeight: 500 }}
       />
     );
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value, id } = e.target;
+    console.log(
+      `Handle form change: Name = ${name}, Value = ${value}, ID = ${id}, Type of Value = ${typeof value}`
+    );
+    if (name === "materialId") {
+      const selectedMaterial = availableMaterials.find(
+        (mat) => String(mat.id) === String(value)
+      );
+      console.log("Selected Material:", selectedMaterial);
+      setFormData((prevData) => ({
+        ...prevData,
+        materialId: String(value),
+        unitOfMeasure: selectedMaterial ? selectedMaterial.unit : "",
+        stockQuantity: selectedMaterial ? selectedMaterial.stockQuantity : 0,
+      }));
+      console.log(
+        "Updated formData.materialId:",
+        String(value),
+        "Type:",
+        typeof String(value)
+      );
+    } else {
+      setFormData((prevData) => {
+        const updatedData = { ...prevData, [name]: value };
+        console.log(
+          "Updated formData for non-materialId field:",
+          updatedData,
+          "Field:",
+          name,
+          "Value:",
+          value
+        );
+        return updatedData;
+      });
+    }
   };
 
   if (loading && materials.length === 0) {
@@ -250,6 +316,10 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
           </Button>
         </Box>
 
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
+          Component Loading State: {loading ? "True" : "False"}
+        </Typography>
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -279,7 +349,9 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
                   <TableRow key={material.id}>
                     <TableCell>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {material.materialId}
+                        {availableMaterials.find(
+                          (mat) => mat.id === material.materialId
+                        )?.name || material.materialId}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -398,19 +470,35 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
               : "Create Material Allocation"}
           </DialogTitle>
           <DialogContent id="material-dialog-description">
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
+              Materials Loading: {materialsLoading ? "True" : "False"},
+              Available Materials Count: {availableMaterials.length}
+              Current FormData Material ID: {formData.materialId}
+            </Typography>
             <Grid container spacing={3} sx={{ mt: 0.5 }}>
               <Grid item xs={12} sm={6}>
-                <TextField
+                <FormControl
                   fullWidth
-                  label="Material ID"
-                  type="number"
-                  value={formData.materialId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, materialId: e.target.value })
-                  }
                   required
-                  disabled={loading}
-                />
+                  disabled={materialsLoading || loading}
+                >
+                  <InputLabel id="material-select-label">Material</InputLabel>
+                  <Select
+                    labelId="material-select-label"
+                    id="materialId"
+                    name="materialId"
+                    value={formData.materialId}
+                    onChange={handleFormChange}
+                    label="Material"
+                  >
+                    <MenuItem value="">Pilih Material</MenuItem>
+                    {availableMaterials.map((material) => (
+                      <MenuItem key={material.id} value={String(material.id)}>
+                        {material.name} ({material.materialId})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -418,13 +506,9 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
                   label="Quantity Required"
                   type="number"
                   step="0.01"
+                  name="quantityRequired"
                   value={formData.quantityRequired}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      quantityRequired: e.target.value,
-                    })
-                  }
+                  onChange={handleFormChange}
                   required
                   disabled={loading}
                 />
@@ -432,14 +516,25 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  label="Current Stock"
+                  type="number"
+                  value={formData.stockQuantity}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  disabled={true}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
                   label="Unit of Measure"
                   value={formData.unitOfMeasure}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unitOfMeasure: e.target.value })
-                  }
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  disabled={true}
                   required
-                  placeholder="e.g., kg, pcs, liter"
-                  disabled={loading}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -449,9 +544,7 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
                   multiline
                   rows={3}
                   value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
+                  onChange={handleFormChange}
                   disabled={loading}
                 />
               </Grid>

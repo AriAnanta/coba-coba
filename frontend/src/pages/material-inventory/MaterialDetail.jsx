@@ -67,14 +67,17 @@ function MaterialDetail() {
         />
       );
     }
-    
+
     const statusConfig = {
       active: { color: "success", label: "Active" },
       discontinued: { color: "error", label: "Discontinued" },
       out_of_stock: { color: "warning", label: "Out of Stock" },
     };
 
-    const config = statusConfig[material.status] || { color: "default", label: material.status };
+    const config = statusConfig[material.status] || {
+      color: "default",
+      label: material.status,
+    };
     return (
       <Chip
         label={config.label}
@@ -283,8 +286,8 @@ function MaterialDetail() {
                     >
                       Category
                     </Typography>
-                    <Chip 
-                      label={material.category} 
+                    <Chip
+                      label={material.category}
                       color="primary"
                       sx={{ mt: 1, fontWeight: 500 }}
                     />
@@ -348,11 +351,14 @@ function MaterialDetail() {
                     >
                       Stock Quantity
                     </Typography>
-                    <Typography 
-                      variant="h5" 
-                      sx={{ 
+                    <Typography
+                      variant="h5"
+                      sx={{
                         fontWeight: 700,
-                        color: material.stockQuantity <= material.reorderLevel ? 'error.main' : 'success.main'
+                        color:
+                          material.stockQuantity <= material.reorderLevel
+                            ? "error.main"
+                            : "success.main",
                       }}
                     >
                       {material.stockQuantity.toLocaleString()} {material.unit}
@@ -450,10 +456,10 @@ function MaterialDetail() {
                       color="text.secondary"
                       sx={{ fontWeight: 600 }}
                     >
-                      Supplier ID
+                      Supplier Name
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {material.supplierId || "Not assigned"}
+                      {material.supplierInfo?.name || "Not assigned"}
                     </Typography>
                   </Grid>
 
