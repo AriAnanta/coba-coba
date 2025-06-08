@@ -38,6 +38,7 @@ import CreateMaterial from "./pages/material-inventory/CreateMaterial";
 import EditMaterial from "./pages/material-inventory/EditMaterial";
 import CreateSupplier from "./pages/material-inventory/CreateSupplier";
 import EditSupplier from "./pages/material-inventory/EditSupplier";
+import PurchaseMaterial from "./pages/material-inventory/PurchaseMaterial";
 
 // Production Planning Pages
 import ProductionPlans from "./pages/planning/ProductionPlans";
@@ -123,6 +124,7 @@ function App() {
             {/* Material Inventory Routes */}
             <Route path="/materials" element={<MaterialList />} />
             <Route path="/materials/new" element={<CreateMaterial />} />
+            <Route path="/materials/purchase" element={<PurchaseMaterial />} />
             <Route path="/materials/:id" element={<MaterialDetail />} />
             <Route path="/materials/:id/edit" element={<EditMaterial />} />
             <Route path="/suppliers" element={<SupplierList />} />

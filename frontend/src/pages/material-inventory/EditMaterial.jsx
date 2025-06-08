@@ -377,9 +377,13 @@ function EditMaterial() {
                   type="number"
                   value={formData.stockQuantity || 0}
                   onChange={handleChange}
+                  InputProps={{
+                    readOnly: true,
+                  }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
+                      bgcolor: "grey.50",
                     },
                   }}
                 />

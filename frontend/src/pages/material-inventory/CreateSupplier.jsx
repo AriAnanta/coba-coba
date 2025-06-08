@@ -28,7 +28,6 @@ import {
 
 function CreateSupplier() {
   const [formData, setFormData] = useState({
-    supplierId: "",
     name: "",
     description: "",
     contactPerson: "",
@@ -192,21 +191,6 @@ function CreateSupplier() {
             </Typography>
 
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Supplier ID"
-                  name="supplierId"
-                  value={formData.supplierId}
-                  onChange={handleChange}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                    },
-                  }}
-                />
-              </Grid>
-
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth

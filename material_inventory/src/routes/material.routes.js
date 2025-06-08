@@ -19,6 +19,12 @@ router.get("/stock-report", materialController.getMaterialStockReport);
 router.post("/check-stock", materialController.checkMaterialStock);
 router.post("/issue", materialController.issueMaterials);
 router.post("/receive", materialController.receiveMaterials);
+router.get("/replenishable", materialController.getReplenishableMaterials);
+router.post("/purchase", materialController.purchaseMaterials);
+router.get(
+  "/recalculate-statuses",
+  materialController.recalculateMaterialStatuses
+);
 router.get("/:id", materialController.getMaterialById);
 router.post("/", materialController.createMaterial);
 router.put("/:id", materialController.updateMaterial);

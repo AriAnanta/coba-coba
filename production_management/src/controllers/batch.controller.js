@@ -670,6 +670,17 @@ exports.createMaterialAllocation = async (req, res) => {
     const { batchId } = req.params;
     const { materialId, quantityRequired, unitOfMeasure, notes } = req.body;
 
+    console.log(
+      "Menerima permintaan createMaterialAllocation untuk batchId:",
+      batchId
+    );
+    console.log("Data yang diterima:", {
+      materialId,
+      quantityRequired,
+      unitOfMeasure,
+      notes,
+    });
+
     // Validate batch exists
     const batch = await ProductionBatch.findByPk(batchId);
     if (!batch) {
@@ -703,7 +714,9 @@ exports.createMaterialAllocation = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating material allocation:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };
 
@@ -800,6 +813,50 @@ exports.allocateMaterial = async (req, res) => {
       status,
       allocationDate: new Date(),
     });
+
+    // Kurangi stok material di layanan Material Inventory
+    try {
+      console.log(
+        `Mengirim permintaan pengurangan stok ke: ${process.env.MATERIAL_INVENTORY_URL}/api/materials/issue`
+      );
+      console.log("Data yang dikirim:", {
+        materials: [
+          {
+            materialId: allocation.materialId,
+            quantity: quantityAllocated,
+          },
+        ],
+        productionOrderId: batchId,
+        referenceNumber: `ALLOC-${batchId}-${allocationId}`,
+        notes: `Pengeluaran material untuk alokasi batch ${batchId}`,
+      });
+
+      await axios.post(
+        `${process.env.MATERIAL_INVENTORY_URL}/api/materials/issue`,
+        {
+          materials: [
+            {
+              materialId: allocation.materialId,
+              quantity: quantityAllocated,
+            },
+          ],
+          productionOrderId: batchId,
+          referenceNumber: `ALLOC-${batchId}-${allocationId}`,
+          notes: `Pengeluaran material untuk alokasi batch ${batchId}`,
+        }
+      );
+      console.log(
+        `Stok material ${allocation.materialId} berhasil dikurangi sebanyak ${quantityAllocated}`
+      );
+    } catch (materialError) {
+      console.error(
+        "Gagal mengurangi stok material di Material Inventory Service:",
+        materialError.message
+      );
+      // Anda bisa memilih untuk melempar error di sini atau hanya log,
+      // tergantung pada seberapa kritis pengurangan stok ini.
+      // Untuk saat ini, kita akan melanjutkan, tetapi log error penting.
+    }
 
     return res.status(200).json({
       message: "Material allocated successfully",

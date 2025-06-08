@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -25,7 +25,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
@@ -34,8 +34,8 @@ import {
   Build as BuildIcon,
   Schedule as ScheduleIcon,
   Assignment as AssignmentIcon,
-} from '@mui/icons-material';
-import { machineQueueAPI } from '../../services/api';
+} from "@mui/icons-material";
+import { machineQueueAPI } from "../../services/api";
 
 const MachineDetail = () => {
   const { id } = useParams();
@@ -57,8 +57,8 @@ const MachineDetail = () => {
       const response = await machineQueueAPI.getMachineById(id);
       setMachine(response.data.data || response.data);
     } catch (err) {
-      console.error('Error fetching machine details:', err);
-      setError('Failed to fetch machine details');
+      console.error("Error fetching machine details:", err);
+      setError("Failed to fetch machine details");
     } finally {
       setLoading(false);
     }
@@ -69,30 +69,46 @@ const MachineDetail = () => {
       const response = await machineQueueAPI.getMachineQueue(id);
       setQueueItems(response.data.data || response.data || []);
     } catch (err) {
-      console.error('Error fetching machine queue:', err);
+      console.error("Error fetching machine queue:", err);
       // Non-critical error, don't set main error state
     }
   };
 
   const getStatusChip = (status) => {
     const statusConfig = {
-      operational: { color: "success", label: "Operational", bgcolor: "#e8f5e8" },
-      maintenance: { color: "warning", label: "Maintenance", bgcolor: "#fff3e0" },
+      operational: {
+        color: "success",
+        label: "Operational",
+        bgcolor: "#e8f5e8",
+      },
+      maintenance: {
+        color: "warning",
+        label: "Maintenance",
+        bgcolor: "#fff3e0",
+      },
       breakdown: { color: "error", label: "Breakdown", bgcolor: "#ffebee" },
       inactive: { color: "default", label: "Inactive", bgcolor: "#f5f5f5" },
     };
 
-    const config = statusConfig[status] || { color: "default", label: status, bgcolor: "#f5f5f5" };
+    const config = statusConfig[status] || {
+      color: "default",
+      label: status,
+      bgcolor: "#f5f5f5",
+    };
     return (
-      <Chip 
-        label={config.label} 
-        sx={{ 
+      <Chip
+        label={config.label}
+        sx={{
           fontWeight: 500,
           bgcolor: config.bgcolor,
-          color: config.color === 'default' ? 'text.primary' : `${config.color}.main`,
+          color:
+            config.color === "default"
+              ? "text.primary"
+              : `${config.color}.main`,
           border: `1px solid`,
-          borderColor: config.color === 'default' ? 'grey.300' : `${config.color}.light`,
-        }} 
+          borderColor:
+            config.color === "default" ? "grey.300" : `${config.color}.light`,
+        }}
       />
     );
   };
@@ -117,11 +133,11 @@ const MachineDetail = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -222,7 +238,6 @@ const MachineDetail = () => {
                   variant="outlined"
                   startIcon={<ArrowBackIcon />}
                   onClick={() => navigate("/machines")}
-                  fullWidth={{ xs: true, sm: false }}
                   sx={{
                     bgcolor: "rgba(255,255,255,0.1)",
                     color: "white",
@@ -230,6 +245,7 @@ const MachineDetail = () => {
                     "&:hover": {
                       bgcolor: "rgba(255,255,255,0.2)",
                     },
+                    width: { xs: "100%", sm: "auto" },
                   }}
                 >
                   Back
@@ -238,13 +254,13 @@ const MachineDetail = () => {
                   variant="contained"
                   startIcon={<EditIcon />}
                   onClick={() => navigate(`/machines/${id}/edit`)}
-                  fullWidth={{ xs: true, sm: false }}
                   sx={{
                     bgcolor: "rgba(255,255,255,0.2)",
                     color: "white",
                     "&:hover": {
                       bgcolor: "rgba(255,255,255,0.3)",
                     },
+                    width: { xs: "100%", sm: "auto" },
                   }}
                 >
                   Edit Machine
@@ -310,7 +326,7 @@ const MachineDetail = () => {
                       Location
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {machine.location || '-'}
+                      {machine.location || "-"}
                     </Typography>
                   </Box>
 
@@ -323,7 +339,7 @@ const MachineDetail = () => {
                       Manufacturer
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {machine.manufacturer || '-'}
+                      {machine.manufacturer || "-"}
                     </Typography>
                   </Box>
 
@@ -336,7 +352,7 @@ const MachineDetail = () => {
                       Model
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {machine.model || '-'}
+                      {machine.model || "-"}
                     </Typography>
                   </Box>
 
@@ -349,10 +365,9 @@ const MachineDetail = () => {
                       Capacity
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {machine.capacity && machine.capacityUnit 
-                        ? `${machine.capacity} ${machine.capacityUnit}` 
-                        : machine.capacity || '-'
-                      }
+                      {machine.capacity && machine.capacityUnit
+                        ? `${machine.capacity} ${machine.capacityUnit}`
+                        : machine.capacity || "-"}
                     </Typography>
                   </Box>
                 </Stack>
@@ -391,7 +406,7 @@ const MachineDetail = () => {
                       Serial Number
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {machine.serialNumber || '-'}
+                      {machine.serialNumber || "-"}
                     </Typography>
                   </Box>
 
@@ -417,7 +432,7 @@ const MachineDetail = () => {
                       Maintenance Schedule
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {machine.maintenanceSchedule || '-'}
+                      {machine.maintenanceSchedule || "-"}
                     </Typography>
                   </Box>
 
@@ -430,7 +445,7 @@ const MachineDetail = () => {
                       Specifications
                     </Typography>
                     <Typography variant="body1">
-                      {machine.specifications || 'No specifications available'}
+                      {machine.specifications || "No specifications available"}
                     </Typography>
                   </Box>
 
@@ -443,7 +458,7 @@ const MachineDetail = () => {
                       Notes
                     </Typography>
                     <Typography variant="body1">
-                      {machine.notes || 'No additional notes'}
+                      {machine.notes || "No additional notes"}
                     </Typography>
                   </Box>
                 </Stack>
@@ -467,26 +482,42 @@ const MachineDetail = () => {
                 </Box>
 
                 {queueItems && queueItems.length > 0 ? (
-                  <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <TableContainer
+                    component={Paper}
+                    variant="outlined"
+                    sx={{ borderRadius: 2 }}
+                  >
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Position</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>
+                            Position
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>
+                            Product
+                          </TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>Batch</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Priority</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Hours Required</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>
+                            Priority
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>
+                            Hours Required
+                          </TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {queueItems.map((item, index) => (
                           <TableRow key={item.id}>
                             <TableCell>
-                              <Chip 
-                                label={item.position === 0 ? 'Active' : item.position}
+                              <Chip
+                                label={
+                                  item.position === 0 ? "Active" : item.position
+                                }
                                 size="small"
-                                color={item.position === 0 ? 'success' : 'default'}
+                                color={
+                                  item.position === 0 ? "success" : "default"
+                                }
                                 variant="outlined"
                               />
                             </TableCell>
@@ -494,15 +525,21 @@ const MachineDetail = () => {
                               {item.productName}
                             </TableCell>
                             <TableCell>{item.batchNumber}</TableCell>
-                            <TableCell>{getQueueStatusChip(item.status)}</TableCell>
+                            <TableCell>
+                              {getQueueStatusChip(item.status)}
+                            </TableCell>
                             <TableCell>
                               <Chip
                                 label={item.priority}
                                 size="small"
                                 color={
-                                  item.priority === 'urgent' ? 'error' :
-                                  item.priority === 'high' ? 'warning' :
-                                  item.priority === 'normal' ? 'info' : 'success'
+                                  item.priority === "urgent"
+                                    ? "error"
+                                    : item.priority === "high"
+                                    ? "warning"
+                                    : item.priority === "normal"
+                                    ? "info"
+                                    : "success"
                                 }
                               />
                             </TableCell>

@@ -52,7 +52,6 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
     materialId: "",
     quantityRequired: "",
     unitOfMeasure: "",
-    notes: "",
     stockQuantity: 0,
   });
   const [allocationData, setAllocationData] = useState({
@@ -202,7 +201,6 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
       materialId: String(material.materialId),
       quantityRequired: material.quantityRequired.toString(),
       unitOfMeasure: material.unitOfMeasure,
-      notes: material.notes || "",
       stockQuantity: selectedMaterial ? selectedMaterial.stockQuantity : 0,
     });
     setOpenDialog(true);
@@ -213,7 +211,6 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
       materialId: "",
       quantityRequired: "",
       unitOfMeasure: "",
-      notes: "",
       stockQuantity: 0,
     });
     setEditingMaterial(null);
@@ -260,7 +257,7 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
         "Type:",
         typeof String(value)
       );
-    } else {
+    } else if (name !== "notes") {
       setFormData((prevData) => {
         const updatedData = { ...prevData, [name]: value };
         console.log(
@@ -535,17 +532,6 @@ const MaterialAllocationsManager = ({ batchId, onMaterialsChange }) => {
                   }}
                   disabled={true}
                   required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Notes"
-                  multiline
-                  rows={3}
-                  value={formData.notes}
-                  onChange={handleFormChange}
-                  disabled={loading}
                 />
               </Grid>
             </Grid>

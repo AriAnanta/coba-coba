@@ -51,7 +51,7 @@ CREATE TABLE materials (
     lead_time INT DEFAULT 7,
     location VARCHAR(100),
     supplier_id INT,
-    status ENUM('active', 'inactive', 'discontinued') NOT NULL DEFAULT 'active',
+    status ENUM('active', 'low_stock', 'out_of_stock', 'discontinued') NOT NULL DEFAULT 'active',
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -66,7 +66,7 @@ CREATE TABLE materials (
 CREATE TABLE material_transactions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     transaction_id VARCHAR(50) UNIQUE NOT NULL,
-    type ENUM('Receipt', 'Issue', 'Adjustment', 'Return', 'Transfer', 'Scrap') NOT NULL,
+    type ENUM('Receipt', 'Issue', 'Adjustment', 'Return', 'Transfer', 'Scrap', 'Purchase') NOT NULL,
     material_id INT NOT NULL,
     quantity DECIMAL(10,3) NOT NULL,
     unit VARCHAR(50) NOT NULL,
@@ -125,3 +125,119 @@ INSERT INTO material_transactions (transaction_id, type, material_id, quantity, 
 ('TXN-008', 'Receipt', 7, 1000.000, 'Meter (m)', now() - INTERVAL 3 DAY, 7, 'PO-2024-004', 35000.00, 35000000.00, 'Stok kain katun', 'admin'),
 ('TXN-009', 'Issue', 8, 5.000, 'Pieces (pcs)', now() - INTERVAL 2 DAY, NULL, 'REQ-2024-004', 125000.00, 625000.00, 'Ganti mata bor rusak', 'operator1'),
 ('TXN-010', 'Receipt', 9, 50.000, 'Pieces (pcs)', now() - INTERVAL 1 DAY, 9, 'PO-2024-005', 15000.00, 750000.00, 'Stok spare part seal', 'admin');
+
+-- =====================================================
+-- STATUS STANDARDIZATION QUERIES
+-- =====================================================
+
+-- Update any incorrectly formatted status values to 'active' as default
+UPDATE materials SET status = 'active' WHERE status NOT IN ('active', 'low_stock', 'out_of_stock', 'discontinued');
+
+-- Fix mixed case status values to standardized lowercase with underscores
+UPDATE materials SET status = 'active' WHERE LOWER(status) = 'active' AND status != 'active';
+UPDATE materials SET status = 'low_stock' WHERE LOWER(REPLACE(status, ' ', '_')) = 'low_stock' AND status != 'low_stock';
+UPDATE materials SET status = 'out_of_stock' WHERE LOWER(REPLACE(status, ' ', '_')) = 'out_of_stock' AND status != 'out_of_stock';
+UPDATE materials SET status = 'discontinued' WHERE LOWER(status) = 'discontinued' AND status != 'discontinued';
+
+-- Fix common variations of status values
+UPDATE materials SET status = 'active' WHERE status IN ('Active', 'ACTIVE', 'active ');
+UPDATE materials SET status = 'low_stock' WHERE status IN ('Low Stock', 'LOW_STOCK', 'Low_Stock', 'low stock', 'low-stock');
+UPDATE materials SET status = 'out_of_stock' WHERE status IN ('Out of Stock', 'OUT_OF_STOCK', 'Out_Of_Stock', 'out of stock', 'out-of-stock', 'outofstock');
+UPDATE materials SET status = 'discontinued' WHERE status IN ('Discontinued', 'DISCONTINUED', 'discontinued ');
+
+-- Display summary of status updates
+SELECT 
+    status,
+    COUNT(*) as count
+FROM materials 
+GROUP BY status
+ORDER BY status;
+
+-- =====================================================
+-- DATABASE-NATIVE STATUS LOGIC
+-- =====================================================
+
+-- Drop existing triggers if they exist
+DROP TRIGGER IF EXISTS materials_status_insert;
+DROP TRIGGER IF EXISTS materials_status_update;
+
+-- Create trigger for INSERT operations
+DELIMITER $$
+CREATE TRIGGER materials_status_insert
+    BEFORE INSERT ON materials
+    FOR EACH ROW
+BEGIN
+    -- Don't change status if it's explicitly set to discontinued
+    IF NEW.status != 'discontinued' THEN
+        IF NEW.stock_quantity <= 0 THEN
+            SET NEW.status = 'out_of_stock';
+        ELSEIF NEW.stock_quantity < NEW.reorder_level THEN
+            SET NEW.status = 'low_stock';
+        ELSE
+            SET NEW.status = 'active';
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
+
+-- Create trigger for UPDATE operations
+DELIMITER $$
+CREATE TRIGGER materials_status_update
+    BEFORE UPDATE ON materials
+    FOR EACH ROW
+BEGIN
+    -- Don't change status if it's explicitly set to discontinued
+    IF NEW.status != 'discontinued' THEN
+        IF NEW.stock_quantity <= 0 THEN
+            SET NEW.status = 'out_of_stock';
+        ELSEIF NEW.stock_quantity < NEW.reorder_level THEN
+            SET NEW.status = 'low_stock';
+        ELSE
+            SET NEW.status = 'active';
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
+
+-- Create a stored procedure to manually recalculate all statuses
+DELIMITER $$
+CREATE PROCEDURE RecalculateMaterialStatuses()
+BEGIN
+    UPDATE materials 
+    SET status = CASE 
+        WHEN status = 'discontinued' THEN 'discontinued'
+        WHEN stock_quantity <= 0 THEN 'out_of_stock'
+        WHEN stock_quantity < reorder_level THEN 'low_stock'
+        ELSE 'active'
+    END;
+    
+    SELECT 
+        'Status recalculation completed' as message,
+        COUNT(*) as total_materials,
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_count,
+        SUM(CASE WHEN status = 'low_stock' THEN 1 ELSE 0 END) as low_stock_count,
+        SUM(CASE WHEN status = 'out_of_stock' THEN 1 ELSE 0 END) as out_of_stock_count,
+        SUM(CASE WHEN status = 'discontinued' THEN 1 ELSE 0 END) as discontinued_count
+    FROM materials;
+END$$
+DELIMITER ;
+
+-- Create a view for materials with computed status (alternative approach)
+CREATE OR REPLACE VIEW materials_with_computed_status AS
+SELECT 
+    *,
+    CASE 
+        WHEN status = 'discontinued' THEN 'discontinued'
+        WHEN stock_quantity <= 0 THEN 'out_of_stock'
+        WHEN stock_quantity < reorder_level THEN 'low_stock'
+        ELSE 'active'
+    END AS computed_status
+FROM materials;
+
+-- Apply the trigger logic to existing data
+CALL RecalculateMaterialStatuses();
+
+-- Test the triggers work correctly
+SELECT 
+    'Trigger setup completed' as message,
+    'Status will now be automatically calculated' as note;

@@ -29,7 +29,6 @@ import supplierService from "../../api/supplierService";
 
 function CreateMaterial() {
   const [formData, setFormData] = useState({
-    materialId: "",
     name: "",
     description: "",
     category: "",
@@ -234,21 +233,6 @@ function CreateMaterial() {
             </Typography>
 
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Material ID"
-                  name="materialId"
-                  value={formData.materialId}
-                  onChange={handleChange}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                    },
-                  }}
-                />
-              </Grid>
-
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth

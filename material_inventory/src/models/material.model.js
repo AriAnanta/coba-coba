@@ -98,7 +98,12 @@ module.exports = (sequelize, DataTypes) => {
         field: "supplier_id",
       },
       status: {
-        type: DataTypes.ENUM("active", "discontinued", "out_of_stock"),
+        type: DataTypes.ENUM(
+          "active",
+          "low_stock",
+          "out_of_stock",
+          "discontinued"
+        ),
         defaultValue: "active",
         field: "status",
       },

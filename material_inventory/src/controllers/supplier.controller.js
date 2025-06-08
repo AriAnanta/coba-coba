@@ -151,7 +151,7 @@ exports.createSupplier = async (req, res) => {
 
     // Generate supplierId jika tidak disediakan
     const newSupplierId =
-      supplierId || `SUP-${Date.now().toString().slice(-6)}`;
+      supplierId || `SUPPLIER-${Date.now().toString().slice(-6)}`;
 
     // Buat pemasok baru
     const newSupplier = await Supplier.create({
@@ -167,7 +167,7 @@ exports.createSupplier = async (req, res) => {
       paymentTerms,
       leadTime: leadTime !== undefined ? leadTime : null,
       rating: rating !== undefined ? rating : null,
-      status: status || "active",
+      status: status || "Active",
       notes,
     });
 

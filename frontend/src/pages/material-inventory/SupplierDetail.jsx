@@ -57,10 +57,10 @@ function SupplierDetail() {
 
   const getStatusChip = (status) => {
     const statusConfig = {
-      "Active": { color: "success", label: "Active" },
-      "Inactive": { color: "default", label: "Inactive" },
+      Active: { color: "success", label: "Active" },
+      Inactive: { color: "default", label: "Inactive" },
       "On Hold": { color: "warning", label: "On Hold" },
-      "Terminated": { color: "error", label: "Terminated" },
+      Terminated: { color: "error", label: "Terminated" },
     };
 
     const config = statusConfig[status] || { color: "default", label: status };
@@ -123,7 +123,7 @@ function SupplierDetail() {
           sx={{
             mb: 4,
             background: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
-            color: 'white',
+            color: "white",
             borderRadius: 3,
             width: "100%",
           }}
@@ -156,12 +156,15 @@ function SupplierDetail() {
                       fontWeight: 700,
                       mb: 1,
                       fontSize: { xs: "1.75rem", sm: "2.125rem" },
-                      color: 'text.primary'
+                      color: "text.primary",
                     }}
                   >
                     {supplier.name}
                   </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.8, color: 'text.secondary' }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ opacity: 0.8, color: "text.secondary" }}
+                  >
                     Supplier Details and Information
                   </Typography>
                 </Box>
@@ -171,14 +174,14 @@ function SupplierDetail() {
                   variant="outlined"
                   startIcon={<ArrowBackIcon />}
                   onClick={() => navigate("/suppliers")}
-                  fullWidth={{ xs: true, sm: false }}
                   sx={{
                     bgcolor: "rgba(255,255,255,0.1)",
-                    color: 'text.primary',
+                    color: "text.primary",
                     borderColor: "rgba(255,255,255,0.5)",
                     "&:hover": {
                       bgcolor: "rgba(255,255,255,0.2)",
                     },
+                    width: { xs: "100%", sm: "auto" },
                   }}
                 >
                   Back
@@ -187,13 +190,13 @@ function SupplierDetail() {
                   variant="contained"
                   startIcon={<EditIcon />}
                   onClick={() => navigate(`/suppliers/${id}/edit`)}
-                  fullWidth={{ xs: true, sm: false }}
                   sx={{
                     bgcolor: "rgba(255,255,255,0.9)",
-                    color: 'text.primary',
+                    color: "text.primary",
                     "&:hover": {
                       bgcolor: "rgba(255,255,255,1)",
                     },
+                    width: { xs: "100%", sm: "auto" },
                   }}
                 >
                   Edit Supplier
@@ -273,7 +276,9 @@ function SupplierDetail() {
                     >
                       Status
                     </Typography>
-                    <Box sx={{ mt: 1 }}>{getStatusChip(supplier.status || 'Active')}</Box>
+                    <Box sx={{ mt: 1 }}>
+                      {getStatusChip(supplier.status || "Active")}
+                    </Box>
                   </Box>
                 </Stack>
               </CardContent>

@@ -37,6 +37,7 @@ import {
   Visibility as VisibilityIcon,
   Inventory as InventoryIcon,
   Warning as WarningIcon,
+  AddShoppingCart as AddShoppingCartIcon,
 } from "@mui/icons-material";
 
 function MaterialList() {
@@ -73,33 +74,33 @@ function MaterialList() {
   }, []);
 
   const getStatusChip = (material) => {
-    if (material.stockQuantity <= material.reorderLevel) {
-      return (
-        <Chip
-          label="Low Stock"
-          color="error"
-          size="small"
-          icon={<WarningIcon />}
-          sx={{ fontWeight: 500 }}
-        />
-      );
-    }
-
     const statusConfig = {
-      active: { color: "success", label: "Active" },
-      discontinued: { color: "error", label: "Discontinued" },
-      out_of_stock: { color: "warning", label: "Out of Stock" },
+      active: { color: "success", label: "Active", icon: null },
+      low_stock: {
+        color: "warning",
+        label: "Low Stock",
+        icon: <WarningIcon fontSize="small" />,
+      },
+      out_of_stock: {
+        color: "error",
+        label: "Out of Stock",
+        icon: <WarningIcon fontSize="small" />,
+      },
+      discontinued: { color: "default", label: "Discontinued", icon: null },
     };
 
     const config = statusConfig[material.status] || {
       color: "default",
       label: material.status,
+      icon: null,
     };
+
     return (
       <Chip
         label={config.label}
         color={config.color}
         size="small"
+        icon={config.icon}
         sx={{ fontWeight: 500 }}
       />
     );
@@ -160,6 +161,16 @@ function MaterialList() {
 
   const handleCreateNew = () => {
     navigate("/materials/new");
+  };
+
+  const getStockQuantityColor = (material) => {
+    if (material.status === "out_of_stock" || material.status === "low_stock") {
+      return "error.main";
+    } else if (material.status === "active") {
+      return "success.main";
+    } else {
+      return "text.secondary"; // for discontinued
+    }
   };
 
   // Filter materials
@@ -261,7 +272,6 @@ function MaterialList() {
                 size="large"
                 startIcon={<AddIcon />}
                 onClick={handleCreateNew}
-                fullWidth={{ xs: true, sm: false }}
                 sx={{
                   bgcolor: "rgba(255,255,255,0.2)",
                   color: "white",
@@ -271,6 +281,7 @@ function MaterialList() {
                   px: 4,
                   py: 1.5,
                   borderRadius: 2,
+                  width: { xs: "100%", sm: "auto" },
                 }}
               >
                 Add Material
@@ -312,10 +323,12 @@ function MaterialList() {
                         <SearchIcon color="action" />
                       </InputAdornment>
                     ),
-                    endAdornment:
-                      searchTerm && (
+                    endAdornment: searchTerm && (
                       <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setSearchTerm("")}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchTerm("")}
+                        >
                           <ClearIcon />
                         </IconButton>
                       </InputAdornment>
@@ -348,7 +361,9 @@ function MaterialList() {
                     Work-in-Progress (WIP)
                   </MenuItem>
                   <MenuItem value="Finished Goods">Finished Goods</MenuItem>
-                  <MenuItem value="Packaging Material">Packaging Material</MenuItem>
+                  <MenuItem value="Packaging Material">
+                    Packaging Material
+                  </MenuItem>
                   <MenuItem value="Consumable">Consumable</MenuItem>
                   <MenuItem value="Spare Part">Spare Part</MenuItem>
                   <MenuItem value="Tool">Tool</MenuItem>
@@ -371,19 +386,22 @@ function MaterialList() {
                       <TableCell sx={{ fontWeight: 600, py: 2 }}>
                         Material ID
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 600, py: 2 }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 2 }}>
+                        Name
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 600, py: 2 }}>
                         Category
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, py: 2 }}>
                         Stock Quantity
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 600, py: 2 }}>Unit</TableCell>
-                      <TableCell sx={{ fontWeight: 600, py: 2 }}>Status</TableCell>
-                      <TableCell
-                        sx={{ fontWeight: 600, py: 2 }}
-                        align="right"
-                      >
+                      <TableCell sx={{ fontWeight: 600, py: 2 }}>
+                        Unit
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 2 }}>
+                        Status
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 2 }} align="right">
                         Actions
                       </TableCell>
                     </TableRow>
@@ -413,7 +431,10 @@ function MaterialList() {
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
-                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            <Typography
+                              variant="body1"
+                              sx={{ fontWeight: 500 }}
+                            >
                               {material.name}
                             </Typography>
                           </TableCell>
@@ -429,17 +450,16 @@ function MaterialList() {
                               variant="body1"
                               sx={{
                                 fontWeight: 600,
-                                color:
-                                  material.stockQuantity <= material.reorderLevel
-                                    ? "error.main"
-                                    : "text.primary",
+                                color: getStockQuantityColor(material),
                               }}
                             >
                               {material.stockQuantity.toLocaleString()}
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
-                            <Typography variant="body2">{material.unit}</Typography>
+                            <Typography variant="body2">
+                              {material.unit}
+                            </Typography>
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
                             {getStatusChip(material)}
@@ -450,6 +470,28 @@ function MaterialList() {
                               spacing={1}
                               justifyContent="flex-end"
                             >
+                              {(material.status === "low_stock" ||
+                                material.status === "out_of_stock") && (
+                                <Tooltip title="Purchase Material">
+                                  <IconButton
+                                    size="small"
+                                    color="primary"
+                                    onClick={() =>
+                                      navigate(
+                                        `/materials/purchase?materialId=${material.id}`
+                                      )
+                                    }
+                                    sx={{
+                                      "&:hover": {
+                                        bgcolor: "primary.light",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <AddShoppingCartIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                               <Tooltip title="View Details">
                                 <IconButton
                                   size="small"
