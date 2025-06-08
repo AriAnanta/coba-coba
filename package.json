@@ -1,0 +1,51 @@
+{
+  "name": "on-demand-manufacturing",
+  "version": "1.0.0",
+  "description": "On-Demand Manufacturing System with Microservices Architecture",
+  "main": "start-services.js",
+  "scripts": {
+    "start": "node start-services.js",
+    "start-all": "node start-services.js",
+    "dev": "nodemon start-services.js",
+    "install-all": "node -e \"const { execSync } = require('child_process'); const services = ['user_service', 'production_management', 'production_planning', 'machine_queue', 'material_inventory', 'production_feedback']; services.forEach(dir => { console.log('Installing dependencies for ' + dir + '...'); try { execSync('cd ' + dir + ' && npm install', {stdio: 'inherit'}); console.log(dir + ' dependencies installed successfully'); } catch(e) { console.error('Failed to install dependencies for ' + dir + ':', e.message); } });\"",
+    "create-services": "node create-services.js",
+    "setup": "npm run create-services && npm run install-all && echo \"Setup completed. Run 'npm run start-all' to start all services.\"",
+    "clean": "node -e \"const { execSync } = require('child_process'); const services = ['user_service', 'production_management', 'production_planning', 'machine_queue', 'material_inventory', 'production_feedback']; services.forEach(dir => { try { execSync('cd ' + dir + ' && rm -rf node_modules package-lock.json', {stdio: 'inherit'}); } catch(e) { console.error('Failed to clean ' + dir); } });\"",
+    "test": "echo \"No tests specified\" && exit 0",
+    "build": "echo \"Build completed\"",
+    "stop": "taskkill /F /IM node.exe || killall node"
+  },
+  "keywords": [
+    "microservices",
+    "manufacturing",
+    "nodejs",
+    "express",
+    "graphql",
+    "production",
+    "enterprise"
+  ],
+  "author": "Manufacturing Team",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-graphql": "^0.12.0",
+    "express-validator": "^7.2.1",
+    "graphql": "^15.10.1",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "mysql2": "^3.14.1",
+    "pg": "^8.16.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

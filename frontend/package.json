@@ -1,0 +1,47 @@
+{
+  "name": "on-demand-manufacturing-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for On-Demand Manufacturing System",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "manufacturing",
+    "frontend",
+    "react",
+    "graphql",
+    "production"
+  ],
+  "author": "Manufacturing Team",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/client": "^3.8.10",
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.7",
+    "@mui/material": "^5.15.7",
+    "@mui/x-data-grid": "^6.19.3",
+    "@mui/x-date-pickers": "^6.19.3",
+    "axios": "^1.6.7",
+    "chart.js": "^4.4.1",
+    "date-fns": "^3.6.0",
+    "dayjs": "^1.11.10",
+    "graphql": "^16.8.1",
+    "jwt-decode": "^4.0.0",
+    "on-demand-manufacturing": "file:..",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.50.0",
+    "react-router-dom": "^6.22.0",
+    "react-toastify": "^10.0.4",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.12"
+  }
+}

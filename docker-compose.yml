@@ -1,0 +1,211 @@
+version: "3.8"
+
+services:
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - user_service
+      - machine_queue
+      - production_management
+      - production_planning
+      - material_inventory
+      - production_feedback
+    networks:
+      - app-network
+
+  # User Service
+  user_service:
+    build: ./user_service
+    ports:
+      - "5006:5006"
+    environment:
+      - NODE_ENV=production
+      - PORT=5006
+      - DB_HOST=user_db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=user_service_db
+      - JWT_SECRET=your_jwt_secret_key
+    depends_on:
+      - user_db
+    networks:
+      - app-network
+
+  # Production Management Service
+  production_management:
+    build: ./production_management
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
+      - DB_HOST=production_management_db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=production_management_db
+      - MATERIAL_INVENTORY_URL=http://material_inventory:5004
+      - MACHINE_QUEUE_URL=http://machine_queue:5003
+      - FEEDBACK_SERVICE_URL=http://production_feedback:5005
+      - PLANNING_SERVICE_URL=http://production_planning:5002
+      - USER_SERVICE_URL=http://user_service:5006
+      - SERVICE_URL=http://frontend:80
+    depends_on:
+      - production_management_db
+    networks:
+      - app-network
+
+  # Production Planning Service
+  production_planning:
+    build: ./production_planning
+    ports:
+      - "5002:5002"
+    environment:
+      - NODE_ENV=production
+      - PORT=5002
+      - DB_HOST=production_planning_db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=production_planning_db
+    depends_on:
+      - production_planning_db
+    networks:
+      - app-network
+
+  # Machine Queue Service
+  machine_queue:
+    build: ./machine_queue
+    ports:
+      - "5003:5003"
+    environment:
+      - NODE_ENV=production
+      - PORT=5003
+      - DB_HOST=machine_queue_db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=machine_queue_db
+    depends_on:
+      - machine_queue_db
+    networks:
+      - app-network
+
+  # Material Inventory Service
+  material_inventory:
+    build: ./material_inventory
+    ports:
+      - "5004:5004"
+    environment:
+      - NODE_ENV=production
+      - PORT=5004
+      - DB_HOST=material_inventory_db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=material_inventory_db
+    depends_on:
+      - material_inventory_db
+    networks:
+      - app-network
+
+  # Production Feedback Service
+  production_feedback:
+    build: ./production_feedback
+    ports:
+      - "5005:5005"
+    environment:
+      - NODE_ENV=production
+      - PORT=5005
+      - DB_HOST=production_feedback_db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=production_feedback_db
+    depends_on:
+      - production_feedback_db
+    networks:
+      - app-network
+
+  # Databases
+  user_db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=user_service_db
+    volumes:
+      - ./database/user_service_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - user_db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  production_management_db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=production_management_db
+    volumes:
+      - ./database/production_management_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - production_management_db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  production_planning_db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=production_planning_db
+    volumes:
+      - ./database/production_planning_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - production_planning_db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  machine_queue_db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=machine_queue_db
+    volumes:
+      - ./database/machine_queue_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - machine_queue_db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  material_inventory_db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=material_inventory_db
+    volumes:
+      - ./database/material_inventory_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - material_inventory_db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  production_feedback_db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=production_feedback_db
+    volumes:
+      - ./database/production_feedback_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - production_feedback_db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  user_db_data:
+  production_management_db_data:
+  production_planning_db_data:
+  machine_queue_db_data:
+  material_inventory_db_data:
+  production_feedback_db_data:
