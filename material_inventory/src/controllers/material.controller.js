@@ -855,6 +855,32 @@ exports.recalculateMaterialStatuses = async (req, res) => {
 };
 
 /**
+ * Mendapatkan semua tipe transaksi material
+ */
+exports.getTransactionTypes = async (req, res) => {
+  try {
+    const transactionTypes = [
+      { value: 'Receipt', label: 'Penerimaan' },
+      { value: 'Issue', label: 'Pengeluaran' },
+      { value: 'Adjustment', label: 'Penyesuaian' },
+      { value: 'Return', label: 'Pengembalian' },
+      { value: 'Transfer', label: 'Transfer' },
+      { value: 'Scrap', label: 'Scrap' },
+      { value: 'Purchase', label: 'Pembelian' }
+    ];
+
+    return res.status(200).json(transactionTypes);
+  } catch (error) {
+    console.error("Error pada getTransactionTypes:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Kesalahan server internal",
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Membuat transaksi pembelian material (penerimaan)
  */
 exports.purchaseMaterials = async (req, res) => {
@@ -862,19 +888,33 @@ exports.purchaseMaterials = async (req, res) => {
     const {
       materialId,
       quantity,
-      price,
+      unitPrice,
+      totalPrice,
       supplierId,
       referenceNumber,
+      batchNumber,
+      deliveryDate,
       notes,
       location,
+      qualityStatus = 'Approved'
     } = req.body;
 
     // Validasi input dasar
-    if (!materialId || !quantity || quantity <= 0 || !price || price <= 0) {
+    if (!materialId || !quantity || quantity <= 0 || !unitPrice || unitPrice <= 0) {
       return res.status(400).json({
         success: false,
-        message:
-          "ID material, kuantitas, dan harga harus valid dan lebih besar dari nol.",
+        message: "ID material, kuantitas, dan harga satuan harus valid dan lebih besar dari nol.",
+      });
+    }
+
+    // Validasi total price
+    const calculatedTotal = parseFloat(quantity) * parseFloat(unitPrice);
+    const providedTotal = totalPrice || calculatedTotal;
+    
+    if (Math.abs(providedTotal - calculatedTotal) > 0.01) {
+      return res.status(400).json({
+        success: false,
+        message: "Total harga tidak sesuai dengan kalkulasi kuantitas × harga satuan.",
       });
     }
 
@@ -887,60 +927,83 @@ exports.purchaseMaterials = async (req, res) => {
         throw new Error(`Material dengan ID ${materialId} tidak ditemukan.`);
       }
 
-      const previousQuantity = material.stockQuantity;
-      const newQuantity = previousQuantity + quantity;
+      const previousQuantity = parseFloat(material.stockQuantity);
+      const purchaseQuantity = parseFloat(quantity);
+      const newQuantity = previousQuantity + purchaseQuantity;
 
-      // Tentukan status baru
-      let newStatus = material.status;
-      if (newQuantity > material.reorderLevel) {
-        newStatus = "active";
-      } else if (newQuantity <= material.reorderLevel && newQuantity > 0) {
-        newStatus = "low_stock";
-      } else if (newQuantity <= 0) {
-        newStatus = "out_of_stock";
-      }
-
-      // Update stok material dan status
+      // Update stok material - status will be automatically calculated by database trigger
       await material.update(
         {
           stockQuantity: newQuantity,
-          status: newStatus,
-          price: price, // Update harga beli terbaru
-          location: location || material.location, // Update lokasi jika disediakan
-          supplierId: supplierId || material.supplierId, // Update supplier jika disediakan
+          price: unitPrice, // Update harga beli terbaru
+          location: location || material.location,
+          supplierId: supplierId || material.supplierId,
         },
         { transaction: t }
       );
 
-      // Buat transaksi pembelian/penerimaan
-      const transaction = await MaterialTransaction.create(
+      // Generate transaction ID
+      const transactionId = `PUR-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+      // Buat transaksi pembelian
+      const materialTransaction = await MaterialTransaction.create(
         {
-          transactionId: `TRP-${Date.now().toString().slice(-6)}`,
+          transactionId,
+          type: 'Purchase',
           materialId: material.id,
-          type: "purchase", // Tipe transaksi baru: 'purchase'
-          quantity: quantity,
+          quantity: purchaseQuantity,
           unit: material.unit,
-          price: price,
-          previousQuantity,
-          newQuantity,
-          referenceNumber,
+          transactionDate: deliveryDate ? new Date(deliveryDate) : new Date(),
           supplierId: supplierId || material.supplierId,
-          receivedBy: req.user ? req.user.username : "system",
-          transactionDate: new Date(),
-          notes: notes || "Pembelian material",
-          status: "completed",
-          location: location || material.location,
+          referenceNumber: referenceNumber || `PO-${Date.now().toString().slice(-6)}`,
+          unitPrice: parseFloat(unitPrice),
+          totalPrice: providedTotal,
+          batchNumber,
+          deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+          receivedBy: req.user ? req.user.username : 'system',
+          qualityStatus,
+          notes: notes || `Pembelian material: ${material.name}`,
+          createdBy: req.user ? req.user.username : 'system'
         },
         { transaction: t }
       );
 
       await t.commit();
 
+      // Fetch updated material with supplier info
+      const updatedMaterial = await Material.findByPk(materialId, {
+        include: [{
+          model: Supplier,
+          as: 'supplierInfo',
+          attributes: ['id', 'supplierId', 'name', 'contactPerson']
+        }]
+      });
+
       return res.status(200).json({
         success: true,
-        message: "Pembelian material berhasil dan stok diperbarui.",
-        transaction: transaction,
-        updatedMaterial: material,
+        message: "Pembelian material berhasil dicatat dan stok diperbarui.",
+        data: {
+          transaction: {
+            id: materialTransaction.id,
+            transactionId: materialTransaction.transactionId,
+            type: materialTransaction.type,
+            quantity: materialTransaction.quantity,
+            unitPrice: materialTransaction.unitPrice,
+            totalPrice: materialTransaction.totalPrice,
+            transactionDate: materialTransaction.transactionDate,
+            referenceNumber: materialTransaction.referenceNumber,
+            batchNumber: materialTransaction.batchNumber
+          },
+          material: {
+            id: updatedMaterial.id,
+            materialId: updatedMaterial.materialId,
+            name: updatedMaterial.name,
+            previousQuantity,
+            newQuantity: updatedMaterial.stockQuantity,
+            status: updatedMaterial.status,
+            unit: updatedMaterial.unit
+          }
+        }
       });
     } catch (error) {
       await t.rollback();
@@ -951,6 +1014,30 @@ exports.purchaseMaterials = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Kesalahan server internal",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Mendapatkan semua supplier untuk dropdown
+ */
+exports.getSuppliers = async (req, res) => {
+  try {
+    const suppliers = await Supplier.findAll({
+      where: {
+        status: 'Active'
+      },
+      attributes: ['id', 'supplierId', 'name', 'contactPerson', 'phone', 'email'],
+      order: [['name', 'ASC']]
+    });
+
+    return res.status(200).json(suppliers);
+  } catch (error) {
+    console.error("Error pada getSuppliers:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Kesalahan server internal",
       error: error.message,
     });
   }

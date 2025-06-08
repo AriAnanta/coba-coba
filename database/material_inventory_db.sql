@@ -79,12 +79,19 @@ CREATE TABLE material_transactions (
     created_by VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    batch_number VARCHAR(100),
+    purchase_order_id VARCHAR(100),
+    delivery_date DATE,
+    received_by VARCHAR(100),
+    quality_status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
     FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE,
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
     INDEX idx_transaction_id (transaction_id),
     INDEX idx_type (type),
     INDEX idx_material (material_id),
-    INDEX idx_date (transaction_date)
+    INDEX idx_date (transaction_date),
+    INDEX idx_purchase_order (purchase_order_id),
+    INDEX idx_batch_number (batch_number)
 );
 
 -- Insert dummy suppliers
@@ -112,19 +119,6 @@ INSERT INTO materials (material_id, name, description, category, type, unit, sto
 ('MAT-008', 'Mata Bor HSS 10mm', 'Mata bor high speed steel', 'Tool', 'Drill Bit', 'Pieces (pcs)', 25.000, 5.000, 125000.00, 7, 'Gudang H-1', 8),
 ('MAT-009', 'O-Ring NBR 50mm', 'O-ring karet nitrile', 'Spare Part', 'Seal', 'Pieces (pcs)', 100.000, 20.000, 15000.00, 10, 'Gudang I-1', 9),
 ('MAT-010', 'End Mill 12mm', 'End mill carbide untuk milling', 'Tool', 'Cutting Tool', 'Pieces (pcs)', 15.000, 3.000, 450000.00, 14, 'Gudang J-1', 10);
-
--- Insert dummy transactions
-INSERT INTO material_transactions (transaction_id, type, material_id, quantity, unit, transaction_date, supplier_id, reference_number, unit_price, total_price, notes, created_by) VALUES
-('TXN-001', 'Receipt', 1, 500.000, 'Kilogram (kg)', now() - INTERVAL 30 DAY, 1, 'PO-2024-001', 15000.00, 7500000.00, 'Pembelian baja ST37 batch 1', 'admin'),
-('TXN-002', 'Issue', 1, 150.500, 'Kilogram (kg)', now() - INTERVAL 25 DAY, NULL, 'REQ-2024-001', 15000.00, 2257500.00, 'Penggunaan untuk batch B001', 'operator1'),
-('TXN-003', 'Receipt', 2, 200.000, 'Kilogram (kg)', now() - INTERVAL 20 DAY, 2, 'PO-2024-002', 25000.00, 5000000.00, 'Pembelian plastik ABS', 'admin'),
-('TXN-004', 'Issue', 3, 25.500, 'Liter (L)', now() - INTERVAL 15 DAY, NULL, 'REQ-2024-002', 45000.00, 1147500.00, 'Maintenance mesin', 'operator2'),
-('TXN-005', 'Receipt', 4, 20.000, 'Pieces (pcs)', now() - INTERVAL 10 DAY, 4, 'PO-2024-003', 85000.00, 1700000.00, 'Stok bearing', 'admin'),
-('TXN-006', 'Adjustment', 5, -50.000, 'Meter (m)', now() - INTERVAL 8 DAY, NULL, 'ADJ-2024-001', 12000.00, -600000.00, 'Penyesuaian stok kabel', 'supervisor1'),
-('TXN-007', 'Issue', 6, 1.500, 'Cubic Meter (m³)', now() - INTERVAL 5 DAY, NULL, 'REQ-2024-003', 8500000.00, 12750000.00, 'Produksi furniture', 'operator3'),
-('TXN-008', 'Receipt', 7, 1000.000, 'Meter (m)', now() - INTERVAL 3 DAY, 7, 'PO-2024-004', 35000.00, 35000000.00, 'Stok kain katun', 'admin'),
-('TXN-009', 'Issue', 8, 5.000, 'Pieces (pcs)', now() - INTERVAL 2 DAY, NULL, 'REQ-2024-004', 125000.00, 625000.00, 'Ganti mata bor rusak', 'operator1'),
-('TXN-010', 'Receipt', 9, 50.000, 'Pieces (pcs)', now() - INTERVAL 1 DAY, 9, 'PO-2024-005', 15000.00, 750000.00, 'Stok spare part seal', 'admin');
 
 -- =====================================================
 -- STATUS STANDARDIZATION QUERIES

@@ -15,6 +15,8 @@ const { verifyToken } = require("../middleware/auth.middleware");
 router.get("/", materialController.getAllMaterials);
 router.get("/categories", materialController.getMaterialCategories);
 router.get("/types", materialController.getMaterialTypes);
+router.get("/transaction-types", materialController.getTransactionTypes);
+router.get("/suppliers", materialController.getSuppliers);
 router.get("/stock-report", materialController.getMaterialStockReport);
 router.post("/check-stock", materialController.checkMaterialStock);
 router.post("/issue", materialController.issueMaterials);
