@@ -40,7 +40,7 @@ cd ../material_inventory && npm install
 cd ../production_feedback && npm install
 ```
 
-### 3. Konfigurasi Environment
+### Konfigurasi Environment
 
 Salin file `.env.example` menjadi `.env` di setiap direktori layanan:
 
@@ -80,16 +80,7 @@ JWT_EXPIRATION=1d
 UPLOAD_DIR=uploads
 ```
 
-Port default untuk setiap layanan:
-
-- User Service: 5006
-- Production Management: 5001
-- Production Planning: 5002
-- Machine Queue: 5003
-- Material Inventory: 5004
-- Production Feedback: 5005
-
-### 4. Inisialisasi Database
+### Inisialisasi Database
 
 Buat database MySQL untuk setiap layanan:
 
@@ -113,7 +104,7 @@ Gunakan script berikut untuk menjalankan semua layanan sekaligus:
 npm run start-all
 ```
 
-### 2. Menjalankan Layanan Tertentu
+### Menjalankan Layanan Tertentu
 
 Untuk menjalankan layanan tertentu secara terpisah:
 
@@ -126,1517 +117,11 @@ npm run start
 npm run dev
 ```
 
-### 3. Memastikan Semua Layanan Berjalan
-
-Setelah menjalankan semua layanan, pastikan semua layanan berjalan dengan memeriksa endpoint health check:
-
-```
-http://localhost:5006/health  # User Service
-http://localhost:5001/health  # Production Management
-http://localhost:5002/health  # Production Planning
-http://localhost:5003/health  # Machine Queue
-http://localhost:5004/health  # Material Inventory
-http://localhost:5005/health  # Production Feedback
-```
-
-## Dokumentasi Lengkap GraphQL API
-
-Berikut adalah dokumentasi lengkap untuk semua layanan yang mengekspos API GraphQL. Setiap layanan memiliki endpoint GraphQL yang dapat diakses untuk melakukan operasi data.
-
-### 🔐 1. User Service - Manajemen Pengguna dan Autentikasi
-
-**Endpoint:** `http://localhost:5006/graphql`
-
-#### Tipe Data Utama
-
-**User** - Informasi pengguna
-```graphql
-type User {
-  id: ID!              # ID unik pengguna
-  username: String!    # Nama pengguna (wajib)
-  email: String!       # Email pengguna (wajib)
-  fullName: String     # Nama lengkap
-  role: String!        # Peran pengguna (wajib)
-  status: String!      # Status pengguna (aktif/nonaktif)
-  lastLogin: String    # Waktu login terakhir
-  createdAt: String!   # Tanggal dibuat
-  updatedAt: String!   # Tanggal diperbarui
-}
-```
-
-**AuthResponse** - Respons autentikasi
-```graphql
-type AuthResponse {
-  token: String!       # Token JWT untuk autentikasi
-  user: User!          # Informasi pengguna yang login
-}
-```
-
-#### 📖 Query (Membaca Data)
-
-**1. Mendapatkan Semua Pengguna**
-```graphql
-query GetAllUsers {
-  users {
-    id
-    username
-    email
-    fullName
-    role
-    status
-    createdAt
-  }
-}
-```
-- **Parameter:** Tidak ada
-- **Output:** Array berisi semua data pengguna
-- **Kegunaan:** Menampilkan daftar semua pengguna dalam sistem
-
-**2. Mendapatkan Pengguna Berdasarkan ID**
-```graphql
-query GetUser($userId: ID!) {
-  user(id: $userId) {
-    id
-    username
-    email
-    fullName
-    role
-    status
-    lastLogin
-  }
-}
-```
-- **Parameter:** 
-  - `id` (ID!, wajib): ID unik pengguna
-- **Output:** Data pengguna spesifik
-- **Kegunaan:** Melihat detail informasi pengguna tertentu
-
-**3. Mendapatkan Informasi Pengguna Saat Ini**
-```graphql
-query GetCurrentUser {
-  currentUser {
-    id
-    username
-    email
-    fullName
-    role
-  }
-}
-```
-- **Parameter:** Tidak ada (menggunakan token di header)
-- **Output:** Data pengguna yang sedang login
-- **Kegunaan:** Menampilkan profil pengguna yang sedang aktif
-
-#### ✏️ Mutation (Mengubah Data)
-
-**1. Login Pengguna**
-```graphql
-mutation Login($username: String!, $password: String!) {
-  login(username: $username, password: $password) {
-    token
-    user {
-      id
-      username
-      email
-      role
-    }
-  }
-}
-```
-- **Parameter:**
-  - `username` (String!, wajib): Nama pengguna
-  - `password` (String!, wajib): Kata sandi
-- **Output:** Token autentikasi dan data pengguna
-- **Contoh:**
-```json
-{
-  "username": "admin",
-  "password": "admin123"
-}
-```
-
-**2. Registrasi Pengguna Baru**
-```graphql
-mutation Register($input: RegisterInput!) {
-  register(
-    username: $input.username,
-    email: $input.email,
-    password: $input.password,
-    fullName: $input.fullName,
-    role: $input.role
-  ) {
-    token
-    user {
-      id
-      username
-      email
-      fullName
-      role
-    }
-  }
-}
-```
-- **Parameter:**
-  - `username` (String!, wajib): Nama pengguna
-  - `email` (String!, wajib): Email pengguna
-  - `password` (String!, wajib): Kata sandi
-  - `fullName` (String): Nama lengkap
-  - `role` (String): Peran pengguna
-
-**3. Memperbarui Data Pengguna**
-```graphql
-mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
-  updateUser(
-    id: $id,
-    username: $input.username,
-    email: $input.email,
-    fullName: $input.fullName,
-    role: $input.role,
-    status: $input.status
-  ) {
-    id
-    username
-    email
-    fullName
-    role
-    status
-  }
-}
-```
-- **Parameter:**
-  - `id` (ID!, wajib): ID unik pengguna yang akan diperbarui
-  - `username`, `email`, `fullName`, `role`, `status`: Data yang akan diperbarui
-
----
-
-### 🏭 2. Production Management Service - Manajemen Produksi
-
-**Endpoint:** `http://localhost:5001/graphql`
-
-#### Tipe Data Utama
-
-**ProductionRequest** - Permintaan produksi
-```graphql
-type ProductionRequest {
-  id: ID!
-  requestId: String!       # ID unik permintaan
-  customerId: String!      # ID pelanggan
-  productName: String!     # Nama produk
-  quantity: Int!           # Jumlah produk
-  priority: Priority!      # Prioritas (low, normal, high, urgent)
-  dueDate: String!         # Tanggal deadline
-  specifications: String   # Spesifikasi produk
-  status: RequestStatus!   # Status permintaan
-  marketplaceData: String  # Data marketplace
-  batches: [ProductionBatch] # Batch produksi terkait
-  createdAt: String!
-  updatedAt: String!
-}
-```
-
-**ProductionBatch** - Batch produksi
-```graphql
-type ProductionBatch {
-  id: ID!
-  batchNumber: String!        # Nomor batch unik
-  requestId: Int!             # ID permintaan produksi
-  scheduledStartDate: String  # Tanggal mulai terjadwal
-  scheduledEndDate: String    # Tanggal selesai terjadwal
-  actualStartDate: String     # Tanggal mulai aktual
-  actualEndDate: String       # Tanggal selesai aktual
-  quantity: Int!              # Jumlah produk dalam batch
-  status: BatchStatus!        # Status batch
-  materialsAssigned: Boolean! # Apakah material sudah dialokasikan
-  machineAssigned: Boolean!   # Apakah mesin sudah dialokasikan
-  notes: String               # Catatan
-  request: ProductionRequest  # Data permintaan terkait
-  steps: [ProductionStep]     # Langkah-langkah produksi
-  materialAllocations: [MaterialAllocation] # Alokasi material
-  createdAt: String!
-  updatedAt: String!
-}
-```
-
-#### 📖 Query (Membaca Data)
-
-**1. Mendapatkan Semua Permintaan Produksi**
-```graphql
-query GetAllProductionRequests {
-  productionRequests {
-    id
-    requestId
-    customerId
-    productName
-    quantity
-    priority
-    dueDate
-    status
-    createdAt
-  }
-}
-```
-- **Parameter:** Tidak ada
-- **Output:** Array berisi semua data permintaan produksi
-- **Kegunaan:** Menampilkan daftar semua permintaan produksi dalam sistem
-
-**2. Mendapatkan Permintaan Produksi Berdasarkan ID**
-```graphql
-query GetProductionRequest($id: ID!) {
-  productionRequest(id: $id) {
-    id
-    requestId
-    customerId
-    productName
-    quantity
-    priority
-    dueDate
-    specifications
-    status
-    batches {
-      id
-      batchNumber
-      status
-      quantity
-    }
-  }
-}
-```
-- **Parameter:** 
-  - `id` (ID!, wajib): ID unik permintaan produksi
-- **Output:** Data permintaan produksi spesifik
-- **Kegunaan:** Melihat detail informasi permintaan produksi tertentu
-
-**3. Mendapatkan Permintaan Berdasarkan Status**
-```graphql
-query GetRequestsByStatus($status: RequestStatus!) {
-  productionRequestsByStatus(status: $status) {
-    id
-    requestId
-    productName
-    priority
-    dueDate
-    status
-  }
-}
-```
-- **Parameter:**
-  - `status` (RequestStatus!, wajib): Status permintaan
-- **Output:** Array berisi data permintaan produksi dengan status tertentu
-- **Kegunaan:** Memfilter permintaan produksi berdasarkan status
-
-**4. Mendapatkan Semua Batch Produksi**
-```graphql
-query GetAllBatches {
-  productionBatches {
-    id
-    batchNumber
-    requestId
-    quantity
-    status
-    scheduledStartDate
-    scheduledEndDate
-    request {
-      productName
-      customerId
-    }
-  }
-}
-```
-- **Parameter:** Tidak ada
-- **Output:** Array berisi semua data batch produksi
-- **Kegunaan:** Menampilkan daftar semua batch produksi dalam sistem
-
-**5. Mendapatkan Batch Produksi Berdasarkan ID**
-```graphql
-query GetProductionBatch($id: ID!) {
-  productionBatch(id: $id) {
-    id
-    batchNumber
-    requestId
-    quantity
-    status
-    scheduledStartDate
-    scheduledEndDate
-    actualStartDate
-    actualEndDate
-    steps {
-      id
-      stepName
-      status
-    }
-    materialAllocations {
-      id
-      materialId
-      quantityRequired
-      quantityAllocated
-      status
-    }
-  }
-}
-```
-- **Parameter:** 
-  - `id` (ID!, wajib): ID unik batch produksi
-- **Output:** Data batch produksi spesifik
-- **Kegunaan:** Melihat detail informasi batch produksi tertentu
-
-#### ✏️ Mutation (Mengubah Data)
-
-**1. Membuat Permintaan Produksi Baru**
-```graphql
-mutation CreateProductionRequest($input: ProductionRequestInput!) {
-  createProductionRequest(input: $input) {
-    id
-    requestId
-    customerId
-    productName
-    quantity
-    priority
-    dueDate
-    status
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "requestId": "REQ-001",
-    "customerId": "CUST-123",
-    "productName": "Widget A",
-    "quantity": 100,
-    "priority": "normal",
-    "dueDate": "2024-12-31",
-    "specifications": "Material: Steel, Color: Blue",
-    "marketplaceData": "{\"source\":\"online\"}"
-  }
-}
-```
-
-**2. Membuat Batch Produksi**
-```graphql
-mutation CreateBatch($input: ProductionBatchInput!) {
-  createProductionBatch(input: $input) {
-    id
-    batchNumber
-    requestId
-    quantity
-    status
-    steps {
-      id
-      stepName
-      status
-    }
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "requestId": 1,
-    "quantity": 50,
-    "scheduledStartDate": "2024-01-15",
-    "scheduledEndDate": "2024-01-25",
-    "notes": "Batch pertama",
-    "steps": [
-      {
-        "stepName": "Cutting",
-        "machineType": "CNC_CUTTING",
-        "scheduledStartTime": "2024-01-15T08:00:00Z",
-        "scheduledEndTime": "2024-01-15T16:00:00Z"
-      }
-    ],
-    "materials": [
-      {
-        "materialId": 1,
-        "quantityRequired": 10.5,
-        "unitOfMeasure": "kg"
-      }
-    ]
-  }
-}
-```
-
-**3. Menyetujui Permintaan Produksi**
-```graphql
-mutation ApproveRequest($id: ID!, $approvedBy: String!, $notes: String) {
-  approveRequest(id: $id, approvedBy: $approvedBy, notes: $notes) {
-    id
-    requestId
-    status
-    approvedBy
-    approvalDate
-  }
-}
-```
-- **Parameter:**
-  - `id` (ID!, wajib): ID unik permintaan produksi
-  - `approvedBy` (String!, wajib): Nama atau ID yang menyetujui
-  - `notes` (String): Catatan persetujuan
-
----
-
-### 📋 3. Production Planning Service - Perencanaan Produksi
-
-**Endpoint:** `http://localhost:5002/graphql`
-
-#### Tipe Data Utama
-
-**ProductionPlan** - Rencana produksi
-```graphql
-type ProductionPlan {
-  id: ID
-  planId: String              # ID rencana unik
-  requestId: Int              # ID permintaan produksi
-  productionRequestId: String # ID permintaan produksi (string)
-  productName: String         # Nama produk
-  plannedStartDate: String    # Tanggal mulai rencana
-  plannedEndDate: String      # Tanggal selesai rencana
-  priority: String            # Prioritas
-  status: String              # Status rencana
-  planningNotes: String       # Catatan perencanaan
-  totalCapacityRequired: Float # Total kapasitas yang dibutuhkan
-  totalMaterialCost: Float    # Total biaya material
-  plannedBatches: Int         # Jumlah batch yang direncanakan
-  approvedBy: String          # Disetujui oleh
-  approvalDate: String        # Tanggal persetujuan
-  createdAt: String
-  updatedAt: String
-  capacityPlans: [CapacityPlan] # Rencana kapasitas
-  materialPlans: [MaterialPlan] # Rencana material
-}
-```
-
-#### 📖 Query (Membaca Data)
-
-**1. Mendapatkan Semua Rencana Produksi**
-```graphql
-query GetAllPlans {
-  plans {
-    id
-    planId
-    productName
-    plannedStartDate
-    plannedEndDate
-    priority
-    status
-    totalCapacityRequired
-    totalMaterialCost
-  }
-}
-```
-
-**2. Mendapatkan Detail Rencana Produksi**
-```graphql
-query GetPlan($id: ID!) {
-  plan(id: $id) {
-    id
-    planId
-    productName
-    plannedStartDate
-    plannedEndDate
-    priority
-    status
-    planningNotes
-    capacityPlans {
-      id
-      machineType
-      hoursRequired
-      startDate
-      endDate
-      status
-    }
-    materialPlans {
-      id
-      materialName
-      quantityRequired
-      unitOfMeasure
-      unitCost
-      totalCost
-    }
-  }
-}
-```
-
-#### ✏️ Mutation (Mengubah Data)
-
-**1. Membuat Rencana Produksi Baru**
-```graphql
-mutation CreatePlan($input: PlanInput!) {
-  createPlan(input: $input) {
-    id
-    planId
-    productName
-    plannedStartDate
-    plannedEndDate
-    priority
-    status
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "requestId": 1,
-    "productName": "Custom Widget",
-    "plannedStartDate": "2024-01-15",
-    "plannedEndDate": "2024-02-10",
-    "priority": "normal",
-    "planningNotes": "Rencana produksi untuk Widget A"
-  }
-}
-```
-
-**2. Menambah Rencana Kapasitas dan Material**
-```graphql
-# Tambah kapasitas mesin
-mutation {
-  addCapacityPlan(planId: "1", input: {
-    machineType: "CNC_CUTTING"
-    hoursRequired: 8.0
-    startDate: "2024-01-15T08:00:00Z"
-    endDate: "2024-01-15T16:00:00Z"
-  }) {
-    id
-    status
-  }
-}
-
-# Tambah material
-mutation {
-  addMaterialPlan(planId: "1", input: {
-    materialId: 1
-    materialName: "Aluminum Sheet"
-    quantityRequired: 50.0
-    unitOfMeasure: "kg"
-    unitCost: 25.0
-  }) {
-    id
-    totalCost
-  }
-}
-```
-
-**3. Menyetujui rencana produksi**
-```graphql
-mutation {
-  approvePlan(
-    id: "1"
-    approvedBy: "admin"
-    notes: "Rencana disetujui untuk produksi"
-  ) {
-    success
-    message
-    batchCreated {
-      batchNumber
-    }
-  }
-}
-```
-
----
-
-### 🤖 4. Machine Queue Service - Manajemen Antrian Mesin
-
-**Endpoint:** `http://localhost:5003/graphql`
-
-#### Tipe Data Utama
-
-**Machine** - Data mesin
-```graphql
-type Machine {
-  id: ID!
-  machineId: String!      # ID mesin unik
-  name: String!           # Nama mesin
-  type: String!           # Tipe mesin
-  manufacturer: String    # Produsen
-  modelNumber: String     # Nomor model
-  capacity: Float         # Kapasitas
-  capacityUnit: String    # Satuan kapasitas
-  location: String        # Lokasi
-  installationDate: Date  # Tanggal instalasi
-  lastMaintenance: Date   # Maintenance terakhir
-  nextMaintenance: Date   # Maintenance berikutnya
-  status: MachineStatus!  # Status mesin
-  hoursPerDay: Float!     # Jam kerja per hari
-  notes: String           # Catatan
-  createdAt: Date!
-  updatedAt: Date!
-  queues: [MachineQueue]  # Antrian terkait
-}
-```
-
-**MachineQueue** - Antrian mesin
-```graphql
-type MachineQueue {
-  id: ID!
-  queueId: String!           # ID antrian unik
-  machineId: ID!             # ID mesin
-  batchId: ID!               # ID batch
-  batchNumber: String!       # Nomor batch
-  productName: String!       # Nama produk
-  stepId: ID                 # ID langkah
-  stepName: String           # Nama langkah
-  scheduledStartTime: Date   # Waktu mulai terjadwal
-  scheduledEndTime: Date     # Waktu selesai terjadwal
-  actualStartTime: Date      # Waktu mulai aktual
-  actualEndTime: Date        # Waktu selesai aktual
-  hoursRequired: Float!      # Jam yang dibutuhkan
-  priority: QueuePriority!   # Prioritas
-  status: QueueStatus!       # Status antrian
-  operatorId: String         # ID operator
-  operatorName: String       # Nama operator
-  setupTime: Float           # Waktu setup
-  position: Int!             # Posisi dalam antrian
-  notes: String              # Catatan
-  createdAt: Date!
-  updatedAt: Date!
-  machine: Machine           # Data mesin terkait
-}
-```
-
-#### 📖 Query (Membaca Data)
-
-**1. Mendapatkan Semua Mesin**
-```graphql
-query GetAllMachines($filter: MachineFilter) {
-  machines(filter: $filter) {
-    id
-    machineId
-    name
-    type
-    manufacturer
-    status
-    location
-    hoursPerDay
-  }
-}
-```
-- **Parameter Filter:**
-```json
-{
-  "filter": {
-    "type": "CNC_CUTTING",
-    "status": "operational"
-  }
-}
-```
-
-**2. Memeriksa Ketersediaan Kapasitas**
-```graphql
-query CheckCapacity(
-  $machineType: String!,
-  $hoursRequired: Float!,
-  $startDate: String,
-  $endDate: String
-) {
-  checkCapacity(
-    machineType: $machineType,
-    hoursRequired: $hoursRequired,
-    startDate: $startDate,
-    endDate: $endDate
-  ) {
-    available
-    message
-    machines {
-      id
-      name
-      type
-      status
-    }
-  }
-}
-```
-- **Contoh Parameter:**
-```json
-{
-  "machineType": "CNC_CUTTING",
-  "hoursRequired": 8.0,
-  "startDate": "2024-01-15T08:00:00Z",
-  "endDate": "2024-01-15T16:00:00Z"
-}
-```
-
-**3. Mendapatkan Antrian untuk Mesin Tertentu**
-```graphql
-query GetMachineQueues($machineId: ID!) {
-  machineQueues(machineId: $machineId) {
-    id
-    queueId
-    batchNumber
-    productName
-    priority
-    status
-    position
-  }
-}
-```
-- **Parameter:**
-  - `machineId` (ID!, wajib): ID mesin
-- **Output:** Array berisi data antrian untuk mesin tertentu
-- **Kegunaan:** Melihat antrian yang terkait dengan mesin tertentu
-
-#### ✏️ Mutation (Mengubah Data)
-
-**1. Membuat Mesin Baru**
-```graphql
-mutation CreateMachine($input: CreateMachineInput!) {
-  createMachine(input: $input) {
-    id
-    machineId
-    name
-    type
-    manufacturer
-    status
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "name": "CNC Machine 01",
-    "type": "CNC_CUTTING",
-    "manufacturer": "Haas Automation",
-    "modelNumber": "VF-2",
-    "capacity": 1000.0,
-    "capacityUnit": "mm",
-    "location": "Workshop A",
-    "hoursPerDay": 16.0,
-    "notes": "Mesin CNC untuk pemotongan presisi"
-  }
-}
-```
-
-**2. Membuat Antrian Baru**
-```graphql
-mutation CreateQueue($input: CreateQueueInput!) {
-  createQueue(input: $input) {
-    id
-    queueId
-    batchNumber
-    productName
-    priority
-    status
-    position
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "machineId": "1",
-    "batchId": "1",
-    "batchNumber": "B001",
-    "productName": "Widget A",
-    "stepName": "Cutting Operation",
-    "hoursRequired": 4.0,
-    "priority": "normal",
-    "scheduledStartTime": "2024-01-15T08:00:00Z",
-    "scheduledEndTime": "2024-01-15T12:00:00Z"
-  }
-}
-```
-
-**3. Memulai Antrian**
-```graphql
-mutation StartQueue($id: ID!, $operatorId: String, $operatorName: String) {
-  startQueue(id: $id, operatorId: $operatorId, operatorName: $operatorName) {
-    id
-    status
-    actualStartTime
-    operatorName
-  }
-}
-```
-- **Parameter:**
-  - `id` (ID!, wajib): ID unik antrian
-  - `operatorId` (String, opsional): ID operator
-  - `operatorName` (String, opsional): Nama operator
-
----
-
-### 📦 5. Material Inventory Service - Manajemen Inventaris Material
-
-**Endpoint:** `http://localhost:5004/graphql`
-
-#### Tipe Data Utama
-
-**Material** - Data material
-```graphql
-type Material {
-  id: ID!
-  materialId: String!      # ID material unik
-  name: String!            # Nama material
-  description: String      # Deskripsi
-  category: String!        # Kategori material
-  type: String!            # Tipe material
-  unit: String!            # Satuan
-  stockQuantity: Float!    # Jumlah stok
-  reorderLevel: Float      # Level pemesanan ulang
-  price: Float             # Harga per unit
-  leadTime: Int            # Waktu tunggu (hari)
-  location: String         # Lokasi penyimpanan
-  supplierId: ID           # ID pemasok
-  status: String!          # Status material
-  notes: String            # Catatan
-  createdAt: String
-  updatedAt: String
-  supplierInfo: Supplier   # Info pemasok
-  transactions: [MaterialTransaction] # Transaksi terkait
-}
-```
-
-**Supplier** - Data pemasok
-```graphql
-type Supplier {
-  id: ID!
-  supplierId: String!      # ID pemasok unik
-  name: String!            # Nama pemasok
-  address: String          # Alamat
-  city: String             # Kota
-  contactPerson: String    # Kontak person
-  phone: String            # Telepon
-  email: String            # Email
-  paymentTerms: String     # Syarat pembayaran
-  leadTime: Int            # Waktu tunggu
-  rating: Float            # Rating
-  status: String!          # Status
-  materials: [Material]    # Material yang disediakan
-}
-```
-
-#### 📖 Query (Membaca Data)
-
-**1. Mendapatkan Semua Material**
-```graphql
-query GetAllMaterials($category: String, $lowStock: Boolean) {
-  materials(category: $category, lowStock: $lowStock) {
-    id
-    materialId
-    name
-    category
-    type
-    unit
-    stockQuantity
-    reorderLevel
-    price
-    status
-    supplierInfo {
-      name
-      contactPerson
-    }
-  }
-}
-```
-- **Parameter:**
-  - `category` (String, opsional): Filter berdasarkan kategori
-  - `lowStock` (Boolean, opsional): Filter material dengan stok rendah
-- **Output:** Array berisi semua data material
-- **Kegunaan:** Menampilkan daftar semua material dalam sistem
-
-**2. Mendapatkan Material Berdasarkan ID**
-```graphql
-query GetMaterial($id: ID!) {
-  material(id: $id) {
-    id
-    materialId
-    name
-    description
-    category
-    type
-    unit
-    stockQuantity
-    reorderLevel
-    price
-    leadTime
-    location
-    supplierId
-    status
-    notes
-  }
-}
-```
-- **Parameter:** 
-  - `id` (ID!, wajib): ID unik material
-- **Output:** Data material spesifik
-- **Kegunaan:** Melihat detail informasi material tertentu
-
-**3. Memeriksa Ketersediaan Stok**
-```graphql
-query CheckStock($input: [StockCheckInput!]!) {
-  checkStock(input: $input) {
-    materialId
-    name
-    available
-    stockQuantity
-    requestedQuantity
-    difference
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": [
-    {
-      "materialId": "1",
-      "quantity": 50.0
-    },
-    {
-      "materialId": "2", 
-      "quantity": 25.5
-    }
-  ]
-}
-```
-
-**4. Mendapatkan Laporan Stok**
-```graphql
-query GetStockReport($category: String, $lowStock: Boolean) {
-  stockReport(category: $category, lowStock: $lowStock) {
-    totalItems
-    totalValue
-    lowStockItems
-    categories
-    materials {
-      name
-      stockQuantity
-      reorderLevel
-      status
-    }
-  }
-}
-```
-
-#### ✏️ Mutation (Mengubah Data)
-
-**1. Membuat Material Baru**
-```graphql
-mutation CreateMaterial($input: MaterialInput!) {
-  createMaterial(input: $input) {
-    id
-    materialId
-    name
-    category
-    type
-    unit
-    stockQuantity
-    price
-    status
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "name": "Steel Rod 10mm",
-    "description": "Stainless steel rod diameter 10mm",
-    "category": "Raw Material",
-    "type": "Steel",
-    "unit": "meter",
-    "stockQuantity": 1000.0,
-    "reorderLevel": 100.0,
-    "price": 15.50,
-    "leadTime": 7,
-    "location": "Warehouse A-1",
-    "supplierId": "1",
-    "status": "active"
-  }
-}
-```
-
-**2. Penerimaan Material**
-```graphql
-mutation ReceiveMaterial($input: TransactionInput!) {
-  receiveMaterial(input: $input) {
-    id
-    transactionId
-    type
-    materialId
-    quantity
-    unitPrice
-    totalPrice
-    transactionDate
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "type": "receipt",
-    "materialId": "1",
-    "quantity": 500.0,
-    "unit": "meter",
-    "supplierId": "1",
-    "referenceNumber": "PO-2024-001",
-    "unitPrice": 15.50,
-    "notes": "Penerimaan material dari supplier"
-  }
-}
-```
-
-**3. Pengeluaran Material**
-```graphql
-mutation IssueMaterial($input: TransactionInput!) {
-  issueMaterial(input: $input) {
-    id
-    transactionId
-    type
-    materialId
-    quantity
-    transactionDate
-    notes
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "type": "issue",
-    "materialId": "1",
-    "quantity": 100.0,
-    "unit": "meter",
-    "transactionDate": "2024-01-20",
-    "notes": "Pengeluaran material untuk produksi"
-  }
-}
-```
-
----
-
-### 📊 6. Production Feedback Service - Umpan Balik Produksi
-
-**Endpoint:** `http://localhost:5005/graphql`
-
-#### Tipe Data Utama
-
-**ProductionFeedback** - Umpan balik produksi
-```graphql
-type ProductionFeedback {
-  id: ID!
-  feedbackId: String!         # ID feedback unik
-  batchId: String!            # ID batch
-  orderId: String             # ID order
-  productId: String           # ID produk
-  productName: String!        # Nama produk
-  productionPlanId: String    # ID rencana produksi
-  status: ProductionStatus!   # Status produksi
-  plannedQuantity: Int!       # Jumlah yang direncanakan
-  actualQuantity: Int         # Jumlah aktual
-  defectQuantity: Int         # Jumlah cacat
-  qualityScore: Float         # Skor kualitas
-  startDate: String           # Tanggal mulai
-  endDate: String             # Tanggal selesai
-  isMarketplaceUpdated: Boolean! # Sudah diupdate ke marketplace
-  notes: String               # Catatan
-  createdAt: String!
-  updatedAt: String!
-  steps: [ProductionStep]     # Langkah produksi
-  qualityChecks: [QualityCheck] # Pemeriksaan kualitas
-  images: [FeedbackImage]     # Gambar terkait
-  comments: [FeedbackComment] # Komentar
-}
-```
-
-**ProductionStep** - Langkah produksi
-```graphql
-type ProductionStep {
-  id: ID!
-  stepId: String!           # ID langkah unik
-  feedbackId: String!       # ID feedback
-  stepName: String!         # Nama langkah
-  stepOrder: Int!           # Urutan langkah
-  machineId: String         # ID mesin
-  machineName: String       # Nama mesin
-  operatorId: String        # ID operator
-  operatorName: String      # Nama operator
-  status: StepStatus!       # Status langkah
-  startTime: String         # Waktu mulai
-  endTime: String           # Waktu selesai
-  duration: Int             # Durasi (menit)
-  plannedQuantity: Int!     # Jumlah yang direncanakan
-  actualQuantity: Int       # Jumlah aktual
-  defectQuantity: Int       # Jumlah cacat
-  notes: String             # Catatan
-}
-```
-
-#### 📖 Query (Membaca Data)
-
-**1. Mendapatkan Semua Feedback dengan Paginasi**
-```graphql
-query GetAllFeedback($pagination: PaginationInput, $filters: FeedbackFilterInput) {
-  getAllFeedback(pagination: $pagination, filters: $filters) {
-    totalItems
-    totalPages
-    currentPage
-    items {
-      id
-      feedbackId
-      batchId
-      productName
-      status
-      plannedQuantity
-      actualQuantity
-      qualityScore
-      createdAt
-    }
-  }
-}
-```
-- **Parameter:**
-```json
-{
-  "pagination": {
-    "page": 1,
-    "limit": 10
-  },
-  "filters": {
-    "status": "in_production",
-    "startDate": "2024-01-01",
-    "endDate": "2024-12-31"
-  }
-}
-```
-
-**2. Mendapatkan Ringkasan Produksi**
-```graphql
-query GetProductionSummary($timeframe: String) {
-  getProductionSummary(timeframe: $timeframe) {
-    totalBatches
-    completedBatches
-    inProductionBatches
-    onHoldBatches
-    cancelledBatches
-    totalPlannedQuantity
-    totalActualQuantity
-    totalDefectQuantity
-    averageQualityScore
-    timeframe
-  }
-}
-```
-- **Parameter:**
-  - `timeframe` (String, opsional): Rentang waktu (misal "daily", "weekly", "monthly", "yearly")
-- **Output:** Ringkasan statistik produksi
-- **Kegunaan:** Melihat ringkasan kinerja produksi dalam periode tertentu
-
-**3. Mendapatkan Detail Feedback**
-```graphql
-query GetFeedbackDetail($id: ID!) {
-  getFeedbackById(id: $id) {
-    id
-    feedbackId
-    batchId
-    productName
-    status
-    plannedQuantity
-    actualQuantity
-    defectQuantity
-    qualityScore
-    steps {
-      stepName
-      status
-      startTime
-      endTime
-      actualQuantity
-    }
-    qualityChecks {
-      checkName
-      result
-      checkDate
-      inspectorName
-    }
-    comments {
-      content
-      commentType
-      userName
-      createdAt
-    }
-  }
-}
-```
-- **Parameter:** 
-  - `id` (ID!, wajib): ID unik feedback
-- **Output:** Data feedback spesifik
-- **Kegunaan:** Melihat detail umpan balik produksi tertentu
-
-#### ✏️ Mutation (Mengubah Data)
-
-**1. Membuat Feedback Baru**
-```graphql
-mutation CreateFeedback($input: ProductionFeedbackInput!) {
-  createFeedback(input: $input) {
-    id
-    feedbackId
-    batchId
-    productName
-    status
-    plannedQuantity
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "batchId": "BATCH-001",
-    "orderId": "ORDER-001",
-    "productId": "PROD-001",
-    "productName": "Contoh Produk",
-    "plannedQuantity": 100,
-    "plannedStartDate": "2025-06-04",
-    "plannedEndDate": "2025-06-10",
-    "status": "pending"
-  }
-}
-```
-
-**2. Membuat Langkah Produksi**
-```graphql
-mutation CreateStep($input: ProductionStepInput!) {
-  createStep(input: $input) {
-    id
-    stepId
-    stepName
-    stepOrder
-    status
-    plannedQuantity
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "feedbackId": "FEEDBACK-001",
-    "stepName": "Cutting Operation",
-    "stepOrder": 1,
-    "machineId": "MACHINE-001",
-    "machineName": "CNC Machine 01",
-    "operatorId": "OP001",
-    "operatorName": "John Doe",
-    "status": "pending",
-    "plannedQuantity": 100
-  }
-}
-```
-
-**3. Membuat Pemeriksaan Kualitas**
-```graphql
-mutation CreateQualityCheck($input: QualityCheckInput!) {
-  createQualityCheck(input: $input) {
-    id
-    checkId
-    checkName
-    result
-    checkDate
-    inspectorName
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "feedbackId": "FEEDBACK-001",
-    "stepId": "STEP-001",
-    "checkName": "Dimensional Check",
-    "checkType": "measurement",
-    "checkDate": "2024-01-15T10:00:00Z",
-    "inspectorName": "Jane Smith",
-    "result": "pass",
-    "standardValue": "10.0mm",
-    "actualValue": "9.98mm",
-    "tolerance": "±0.05mm"
-  }
-}
-```
-
-**4. Menambah Komentar**
-```graphql
-mutation CreateComment($input: FeedbackCommentInput!) {
-  createComment(input: $input) {
-    id
-    commentId
-    content
-    commentType
-    userName
-    createdAt
-  }
-}
-```
-- **Parameter Input:**
-```json
-{
-  "input": {
-    "feedbackId": "FEEDBACK-001",
-    "commentType": "internal",
-    "content": "Periksa kembali jumlah produksi",
-    "isImportant": true
-  }
-}
-```
-
----
-
-## 🚀 Contoh Penggunaan Lengkap
-
-### Skenario: Membuat Permintaan Produksi Lengkap
-
-**1. Login untuk mendapatkan token**
-```graphql
-# User Service
-mutation {
-  login(username: "admin", password: "admin123") {
-    token
-    user { username role }
-  }
-}
-```
-
-**2. Membuat permintaan produksi baru**
-```graphql
-# Production Management Service
-mutation {
-  createProductionRequest(input: {
-    requestId: "REQ-2024-001"
-    customerId: "CUST-001"
-    productName: "Custom Widget"
-    quantity: 100
-    priority: normal
-    dueDate: "2024-02-15"
-    specifications: "Material: Aluminum, Finish: Anodized"
-  }) {
-    id
-    requestId
-    status
-  }
-}
-```
-
-**3. Membuat rencana produksi**
-```graphql
-# Production Planning Service
-mutation {
-  createPlan(input: {
-    requestId: 1
-    productName: "Custom Widget"
-    plannedStartDate: "2024-01-20"
-    plannedEndDate: "2024-02-10"
-    priority: "normal"
-    planningNotes: "Rencana produksi untuk Widget A"
-  }) {
-    id
-    planId
-    status
-  }
-}
-```
-
-**4. Menambah rencana kapasitas dan material**
-```graphql
-# Tambah kapasitas mesin
-mutation {
-  addCapacityPlan(planId: "1", input: {
-    machineType: "CNC_CUTTING"
-    hoursRequired: 8.0
-    startDate: "2024-01-15T08:00:00Z"
-    endDate: "2024-01-15T16:00:00Z"
-  }) {
-    id
-    status
-  }
-}
-
-# Tambah material
-mutation {
-  addMaterialPlan(planId: "1", input: {
-    materialId: 1
-    materialName: "Aluminum Sheet"
-    quantityRequired: 50.0
-    unitOfMeasure: "kg"
-    unitCost: 25.0
-  }) {
-    id
-    totalCost
-  }
-}
-```
-
-**5. Menyetujui rencana produksi**
-```graphql
-mutation {
-  approvePlan(
-    id: "1"
-    approvedBy: "admin"
-    notes: "Rencana disetujui untuk produksi"
-  ) {
-    success
-    message
-    batchCreated {
-      batchNumber
-    }
-  }
-}
-```
-
----
-
-## Autentikasi
-
-Untuk mengakses API yang memerlukan autentikasi, tambahkan header berikut:
-
-```http
-Authorization: Bearer <token_dari_login>
-```
-
-Contoh menggunakan curl:
-```bash
-curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
-     -H "Content-Type: application/json" \
-     -d '{"query":"query { currentUser { username role } }"}' \
-     http://localhost:5006/graphql
-```
-
-## Error Handling
-
-Semua layanan menggunakan format error standar GraphQL:
-
-```json
-{
-  "errors": [
-    {
-      "message": "Pesan error yang jelas",
-      "locations": [{"line": 2, "column": 3}],
-      "path": ["fieldName"]
-    }
-  ],
-  "data": null
-}
-```
-
-## Tips Penggunaan
-
-1. **Gunakan Apollo Sandbox** untuk testing queries di browser
-2. **Selalu sertakan token** untuk operasi yang memerlukan autentikasi
-3. **Periksa status layanan** di endpoint `/health` sebelum menggunakan API
-4. **Gunakan paginasi** untuk query yang mengembalikan data dalam jumlah besar
-5. **Manfaatkan filter** untuk memperoleh data yang spesifik
-
----
-
 ## Pengujian GraphQL
 
 Setiap layanan memiliki endpoint GraphQL yang dapat diuji menggunakan Apollo Sandbox atau tools lain seperti Postman.
 
-### 1. Menggunakan Apollo Sandbox
+### Menggunakan Apollo Sandbox
 
 Apollo Sandbox tersedia di endpoint GraphQL masing-masing layanan:
 
@@ -1647,148 +132,6 @@ http://localhost:5003/graphql  # Machine Queue
 http://localhost:5004/graphql  # Material Inventory
 http://localhost:5005/graphql  # Production Feedback
 ```
-
-### 2. Contoh Query GraphQL
-
-#### User Service (Autentikasi)
-
-```graphql
-mutation Login {
-  login(input: { username: "admin", password: "admin123" }) {
-    token
-    user {
-      id
-      username
-      role
-    }
-  }
-}
-```
-
-#### Production Feedback
-
-```graphql
-# Mendapatkan daftar feedback dengan paginasi
-query GetAllFeedback {
-  getAllFeedback(pagination: { page: 1, limit: 10 }) {
-    totalItems
-    totalPages
-    currentPage
-    items {
-      id
-      feedbackId
-      batchId
-      status
-      productName
-      createdAt
-    }
-  }
-}
-
-# Membuat feedback baru (memerlukan token autentikasi)
-mutation CreateFeedback {
-  createFeedback(
-    input: {
-      batchId: "BATCH-001"
-      orderId: "ORDER-001"
-      productId: "PROD-001"
-      productName: "Contoh Produk"
-      plannedQuantity: 100
-      plannedStartDate: "2025-06-04"
-      plannedEndDate: "2025-06-10"
-      status: "pending"
-    }
-  ) {
-    id
-    feedbackId
-    batchId
-    status
-  }
-}
-```
-
-#### Material Inventory
-
-```graphql
-# Mendapatkan daftar material
-query GetAllMaterials {
-  getAllMaterials(pagination: { page: 1, limit: 10 }) {
-    totalItems
-    totalPages
-    currentPage
-    items {
-      id
-      materialId
-      name
-      quantity
-      unit
-      createdAt
-    }
-  }
-}
-```
-
-### 3. Autentikasi di GraphQL
-
-Untuk query/mutation yang memerlukan autentikasi:
-
-1. Dapatkan token dengan menjalankan mutation `login` di User Service
-2. Tambahkan token ke HTTP Headers pada Apollo Sandbox:
-   ```json
-   {
-     "Authorization": "Bearer [token_yang_didapat]"
-   }
-   ```
-
-## Struktur Folder
-
-Setiap layanan memiliki struktur folder yang serupa:
-
-```
-layanan/
-├── node_modules/
-├── public/          # Aset statis
-├── src/
-│   ├── controllers/ # Controller untuk endpoint REST
-│   ├── models/      # Model database Sequelize
-│   ├── routes/      # Rute API dan UI
-│   ├── graphql/     # Skema dan resolver GraphQL
-│   ├── middlewares/ # Middleware aplikasi
-│   ├── utils/       # Utilitas umum
-│   └── app.js       # Entry point aplikasi
-├── uploads/         # Folder upload file
-├── views/           # Template UI
-├── .env             # Konfigurasi environment
-├── .gitignore
-├── package.json
-└── README.md
-```
-
-## Pemecahan Masalah
-
-### Database Connection Issues
-
-Jika terjadi masalah koneksi database:
-
-1. Pastikan server MySQL berjalan
-2. Periksa kredensial database di file `.env`
-3. Periksa apakah database telah dibuat
-
-### Service Communication Issues
-
-Jika terjadi masalah komunikasi antar layanan:
-
-1. Pastikan semua layanan berjalan
-2. Periksa konfigurasi URL layanan di file `.env`
-3. Pastikan tidak ada konflik port
-
-### Auth Issues
-
-Jika terjadi masalah autentikasi:
-
-1. Pastikan User Service berjalan dengan benar
-2. Periksa JWT_SECRET di file `.env` apakah sama di semua layanan
-3. Periksa apakah token belum kedaluwarsa
 
 ## Menjalankan dengan Docker
 
@@ -1813,3 +156,1400 @@ Untuk kontribusi pengembangan:
 3. Commit perubahan (`git commit -am 'Menambahkan fitur baru'`)
 4. Push ke branch (`git push origin fitur-baru`)
 5. Buat Pull Request baru
+
+## Dokumentasi GraphQL API
+
+Berikut adalah dokumentasi lengkap untuk setiap layanan yang mengekspos API GraphQL.
+
+### 1. Machine Queue Service
+
+**Endpoint:** `http://localhost:5003/graphql`
+
+#### Tipe Kustom
+
+- **`Date`**: Tipe skalar untuk representasi waktu.
+- **`MachineStatus`**: Status mesin (`operational`, `maintenance`, `breakdown`, `inactive`).
+- **`QueueStatus`**: Status antrian (`waiting`, `in_progress`, `completed`, `paused`, `cancelled`).
+- **`QueuePriority`**: Prioritas antrian (`low`, `normal`, `high`, `urgent`).
+- **`Machine`** (Mesin):
+  - `id`: `ID!` (Wajib, ID unik)
+  - `machineId`: `String!` (Wajib, ID mesin unik)
+  - `name`: `String!` (Wajib, Nama mesin)
+  - `type`: `String!` (Wajib, Tipe mesin)
+  - `manufacturer`: `String` (Produsen)
+  - `modelNumber`: `String` (Nomor model)
+  - `capacity`: `Float` (Kapasitas)
+  - `capacityUnit`: `String` (Satuan kapasitas)
+  - `location`: `String` (Lokasi)
+  - `installationDate`: `Date` (Tanggal instalasi)
+  - `lastMaintenance`: `Date` (Tanggal perawatan terakhir)
+  - `nextMaintenance`: `Date` (Tanggal perawatan berikutnya)
+  - `status`: `MachineStatus!` (Wajib, Status mesin)
+  - `hoursPerDay`: `Float!` (Wajib, Jam kerja per hari)
+  - `notes`: `String` (Catatan)
+  - `createdAt`: `Date!` (Wajib, Tanggal dibuat)
+  - `updatedAt`: `Date!` (Wajib, Tanggal diperbarui)
+  - `queues`: `[MachineQueue]` (Daftar antrian terkait)
+- **`MachineQueue`** (Antrian Mesin):
+  - `id`: `ID!` (Wajib, ID unik)
+  - `queueId`: `String!` (Wajib, ID antrian unik)
+  - `machineId`: `ID!` (Wajib, ID mesin)
+  - `batchId`: `ID!` (Wajib, ID batch)
+  - `batchNumber`: `String!` (Wajib, Nomor batch)
+  - `productName`: `String!` (Wajib, Nama produk)
+  - `stepId`: `ID` (ID langkah)
+  - `stepName`: `String` (Nama langkah)
+  - `scheduledStartTime`: `Date` (Waktu mulai terjadwal)
+  - `scheduledEndTime`: `Date` (Waktu selesai terjadwal)
+  - `actualStartTime`: `Date` (Waktu mulai aktual)
+  - `actualEndTime`: `Date` (Waktu selesai aktual)
+  - `hoursRequired`: `Float!` (Wajib, Jam yang dibutuhkan)
+  - `priority`: `QueuePriority!` (Wajib, Prioritas)
+  - `status`: `QueueStatus!` (Wajib, Status)
+  - `operatorId`: `String` (ID operator)
+  - `operatorName`: `String` (Nama operator)
+  - `setupTime`: `Float` (Waktu setup)
+  - `position`: `Int!` (Wajib, Posisi dalam antrian)
+  - `notes`: `String` (Catatan)
+  - `createdAt`: `Date!` (Wajib, Tanggal dibuat)
+  - `updatedAt`: `Date!` (Wajib, Tanggal diperbarui)
+  - `machine`: `Machine` (Data mesin terkait)
+- **`CapacityResponse`** (Respons Kapasitas):
+  - `available`: `Boolean!` (Wajib, Ketersediaan)
+  - `message`: `String!` (Wajib, Pesan)
+  - `machines`: `[Machine]` (Daftar mesin yang tersedia)
+
+#### Tipe Input
+
+- **`MachineFilter`**: Filter untuk memperoleh mesin.
+  - `type`: `String` (Tipe mesin)
+  - `status`: `MachineStatus` (Status mesin)
+- **`QueueFilter`**: Filter untuk memperoleh antrian.
+  - `machineId`: `ID` (ID mesin)
+  - `batchId`: `ID` (ID batch)
+  - `status`: `QueueStatus` (Status antrian)
+  - `priority`: `QueuePriority` (Prioritas antrian)
+- **`CreateMachineInput`**: Input untuk membuat mesin baru.
+  - `name`: `String!` (Wajib, Nama mesin)
+  - `type`: `String!` (Wajib, Tipe mesin)
+  - `manufacturer`: `String`
+  - `modelNumber`: `String`
+  - `capacity`: `Float`
+  - `capacityUnit`: `String`
+  - `location`: `String`
+  - `installationDate`: `String`
+  - `hoursPerDay`: `Float`
+  - `notes`: `String`
+- **`CreateQueueInput`**: Input untuk membuat antrian baru.
+  - `machineId`: `ID!` (Wajib)
+  - `batchId`: `ID!` (Wajib)
+  - `batchNumber`: `String!` (Wajib)
+  - `productName`: `String!` (Wajib)
+  - `stepId`: `ID`
+  - `stepName`: `String`
+  - `scheduledStartTime`: `String`
+  - `scheduledEndTime`: `String`
+  - `hoursRequired`: `Float!` (Wajib)
+  - `priority`: `QueuePriority`
+  - `operatorId`: `String`
+  - `operatorName`: `String`
+  - `setupTime`: `Float`
+  - `notes`: `String`
+- **`UpdateMachineInput`**: Input untuk memperbarui mesin.
+  - `name`: `String`
+  - `type`: `String`
+  - `manufacturer`: `String`
+  - `modelNumber`: `String`
+  - `capacity`: `Float`
+  - `capacityUnit`: `String`
+  - `location`: `String`
+  - `installationDate`: `String`
+  - `lastMaintenance`: `String`
+  - `nextMaintenance`: `String`
+  - `status`: `MachineStatus`
+  - `hoursPerDay`: `Float`
+  - `notes`: `String`
+- **`UpdateQueueInput`**: Input untuk memperbarui antrian.
+  - `machineId`: `ID`
+  - `scheduledStartTime`: `String`
+  - `scheduledEndTime`: `String`
+  - `actualStartTime`: `String`
+  - `actualEndTime`: `String`
+  - `hoursRequired`: `Float`
+  - `priority`: `QueuePriority`
+  - `status`: `QueueStatus`
+  - `operatorId`: `String`
+  - `operatorName`: `String`
+  - `setupTime`: `Float`
+  - `position`: `Int`
+  - `notes`: `String`
+
+#### Queries
+
+- **`machines(filter: MachineFilter)`**: Mendapatkan semua mesin.
+  - **Argumen:**
+    - `filter`: `MachineFilter` (Opsional, filter mesin berdasarkan tipe atau status).
+  - **Output:** `[Machine]` (Daftar objek Mesin).
+- **`machine(id: ID!)`**: Mendapatkan mesin berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik mesin).
+  - **Output:** `Machine` (Objek Mesin).
+- **`machineTypes`**: Mendapatkan semua tipe mesin yang tersedia.
+  - **Argumen:** Tidak ada.
+  - **Output:** `[String]` (Daftar tipe mesin).
+- **`queues(filter: QueueFilter)`**: Mendapatkan semua antrian.
+  - **Argumen:**
+    - `filter`: `QueueFilter` (Opsional, filter antrian berdasarkan ID mesin, ID batch, status, atau prioritas).
+  - **Output:** `[MachineQueue]` (Daftar objek MachineQueue).
+- **`queue(id: ID!)`**: Mendapatkan antrian berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik antrian).
+  - **Output:** `MachineQueue` (Objek MachineQueue).
+- **`machineQueues(machineId: ID!)`**: Mendapatkan antrian untuk mesin tertentu.
+  - **Argumen:**
+    - `machineId`: `ID!` (Wajib, ID mesin).
+  - **Output:** `[MachineQueue]` (Daftar objek MachineQueue).
+- **`batchQueues(batchId: ID!)`**: Mendapatkan antrian untuk batch tertentu.
+  - **Argumen:**
+    - `batchId`: `ID!` (Wajib, ID batch).
+  - **Output:** `[MachineQueue]` (Daftar objek MachineQueue).
+- **`checkCapacity(machineType: String!, hoursRequired: Float!, startDate: String, endDate: String)`**: Memeriksa ketersediaan kapasitas mesin untuk waktu tertentu.
+  - **Argumen:**
+    - `machineType`: `String!` (Wajib, Tipe mesin).
+    - `hoursRequired`: `Float!` (Wajib, Jumlah jam yang dibutuhkan).
+    - `startDate`: `String` (Opsional, Tanggal mulai. Default: sekarang).
+    - `endDate`: `String` (Opsional, Tanggal selesai. Default: startDate + hoursRequired).
+  - **Output:** `CapacityResponse` (Objek CapacityResponse yang menunjukkan ketersediaan).
+
+#### Mutations
+
+- **`createMachine(input: CreateMachineInput!)`**: Membuat mesin baru.
+  - **Argumen:**
+    - `input`: `CreateMachineInput!` (Wajib, data mesin baru).
+  - **Output:** `Machine` (Objek Mesin yang baru dibuat).
+- **`updateMachine(id: ID!, input: UpdateMachineInput!)`**: Memperbarui mesin.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik mesin yang akan diperbarui).
+    - `input`: `UpdateMachineInput!` (Wajib, data mesin yang akan diperbarui).
+  - **Output:** `Machine` (Objek Mesin yang diperbarui).
+- **`deleteMachine(id: ID!)`**: Menghapus mesin.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik mesin yang akan dihapus).
+  - **Output:** `Boolean` (True jika berhasil dihapus, false jika gagal).
+- **`createQueue(input: CreateQueueInput!)`**: Membuat antrian baru.
+  - **Argumen:**
+    - `input`: `CreateQueueInput!` (Wajib, data antrian baru).
+  - **Output:** `MachineQueue` (Objek MachineQueue yang baru dibuat).
+- **`updateQueue(id: ID!, input: UpdateQueueInput!)`**: Memperbarui antrian.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik antrian yang akan diperbarui).
+    - `input`: `UpdateQueueInput!` (Wajib, data antrian yang akan diperbarui).
+  - **Output:** `MachineQueue` (Objek MachineQueue yang diperbarui).
+- **`deleteQueue(id: ID!)`**: Menghapus antrian.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik antrian yang akan dihapus).
+  - **Output:** `Boolean` (True jika berhasil dihapus, false jika gagal).
+- **`changeQueuePriority(id: ID!, priority: QueuePriority!)`**: Mengubah prioritas antrian.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik antrian).
+    - `priority`: `QueuePriority!` (Wajib, prioritas baru).
+  - **Output:** `MachineQueue` (Objek MachineQueue yang diperbarui).
+- **`reorderQueue(id: ID!, newPosition: Int!)`**: Mengubah urutan antrian.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik antrian).
+    - `newPosition`: `Int!` (Wajib, posisi baru dalam antrian).
+  - **Output:** `MachineQueue` (Objek MachineQueue yang diperbarui).
+- **`startQueue(id: ID!, operatorId: String, operatorName: String)`**: Memulai pekerjaan antrian.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik antrian).
+    - `operatorId`: `String` (Opsional, ID operator).
+    - `operatorName`: `String` (Opsional, Nama operator).
+  - **Output:** `MachineQueue` (Objek MachineQueue yang diperbarui).
+- **`completeQueue(id: ID!, notes: String)`**: Menyelesaikan pekerjaan antrian.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik antrian).
+    - `notes`: `String` (Opsional, catatan penyelesaian).
+  - **Output:** `MachineQueue` (Objek MachineQueue yang diperbarui).
+
+### 2. Material Inventory Service
+
+**Endpoint:** `http://localhost:5004/graphql`
+
+#### Tipe Kustom
+
+- **`Material`** (Material):
+  - `id`: `ID!` (Wajib, ID unik)
+  - `materialId`: `String!` (Wajib, ID material unik)
+  - `name`: `String!` (Wajib, Nama material)
+  - `description`: `String` (Deskripsi)
+  - `category`: `String!` (Wajib, Kategori material)
+  - `type`: `String!` (Wajib, Tipe material)
+  - `unit`: `String!` (Wajib, Satuan)
+  - `stockQuantity`: `Float!` (Wajib, Jumlah stok)
+  - `reorderLevel`: `Float` (Tingkat pemesanan ulang)
+  - `price`: `Float` (Harga per unit)
+  - `leadTime`: `Int` (Waktu tunggu dalam hari)
+  - `location`: `String` (Lokasi penyimpanan)
+  - `supplierId`: `ID` (ID pemasok)
+  - `status`: `String!` (Wajib, Status material)
+  - `notes`: `String` (Catatan)
+  - `createdAt`: `String` (Tanggal dibuat)
+  - `updatedAt`: `String` (Tanggal diperbarui)
+  - `supplierInfo`: `Supplier` (Informasi pemasok terkait)
+  - `transactions`: `[MaterialTransaction]` (Daftar transaksi terkait)
+- **`Supplier`** (Pemasok):
+  - `id`: `ID!` (Wajib, ID unik)
+  - `supplierId`: `String!` (Wajib, ID pemasok unik)
+  - `name`: `String!` (Wajib, Nama pemasok)
+  - `address`: `String` (Alamat)
+  - `city`: `String` (Kota)
+  - `state`: `String` (Negara bagian)
+  - `postalCode`: `String` (Kode pos)
+  - `country`: `String` (Negara)
+  - `contactPerson`: `String` (Kontak person)
+  - `phone`: `String` (Telepon)
+  - `email`: `String` (Email)
+  - `website`: `String` (Situs web)
+  - `paymentTerms`: `String` (Syarat pembayaran)
+  - `leadTime`: `Int` (Waktu tunggu dalam hari)
+  - `rating`: `Float` (Rating)
+  - `status`: `String!` (Wajib, Status)
+  - `notes`: `String` (Catatan)
+  - `createdAt`: `String` (Tanggal dibuat)
+  - `updatedAt`: `String` (Tanggal diperbarui)
+  - `materials`: `[Material]` (Daftar material yang disediakan)
+- **`MaterialTransaction`** (Transaksi Material):
+  - `id`: `ID!` (Wajib, ID unik)
+  - `transactionId`: `String!` (Wajib, ID transaksi unik)
+  - `type`: `String!` (Wajib, Tipe transaksi)
+  - `materialId`: `ID!` (Wajib, ID material)
+  - `quantity`: `Float!` (Wajib, Jumlah)
+  - `unit`: `String!` (Wajib, Satuan)
+  - `transactionDate`: `String!` (Wajib, Tanggal transaksi)
+  - `supplierId`: `ID` (ID pemasok)
+  - `referenceNumber`: `String` (Nomor referensi)
+  - `unitPrice`: `Float` (Harga per unit)
+  - `totalPrice`: `Float` (Harga total)
+  - `notes`: `String` (Catatan)
+  - `createdBy`: `String` (Dibuat oleh)
+  - `createdAt`: `String` (Tanggal dibuat)
+  - `updatedAt`: `String` (Tanggal diperbarui)
+  - `material`: `Material` (Material terkait)
+  - `supplier`: `Supplier` (Pemasok terkait)
+- **`StockReport`** (Laporan Stok):
+  - `totalItems`: `Int!` (Wajib, Total item)
+  - `totalValue`: `Float` (Nilai total persediaan)
+  - `lowStockItems`: `Int` (Jumlah item stok rendah)
+  - `categories`: `[String]` (Kategori material)
+  - `materials`: `[Material]` (Daftar material)
+- **`SupplierPerformance`** (Kinerja Pemasok):
+  - `supplierId`: `ID!` (Wajib, ID pemasok)
+  - `name`: `String!` (Wajib, Nama pemasok)
+  - `totalTransactions`: `Int` (Total transaksi)
+  - `totalValue`: `Float` (Nilai total transaksi)
+  - `onTimeDelivery`: `Float` (Tingkat pengiriman tepat waktu)
+  - `qualityRating`: `Float` (Rating kualitas)
+  - `materialCount`: `Int` (Jumlah material yang disediakan)
+- **`GenericResponse`** (Respons Generik):
+  - `success`: `Boolean!` (Wajib, Status keberhasilan)
+  - `message`: `String` (Pesan)
+  - `id`: `ID` (ID terkait)
+- **`StockCheckResult`** (Hasil Cek Stok):
+  - `materialId`: `ID!` (Wajib, ID material)
+  - `name`: `String!` (Wajib, Nama material)
+  - `available`: `Boolean!` (Wajib, Ketersediaan)
+  - `stockQuantity`: `Float!` (Wajib, Jumlah stok saat ini)
+  - `requestedQuantity`: `Float!` (Wajib, Jumlah yang diminta)
+  - `difference`: `Float!` (Wajib, Selisih stok)
+
+#### Tipe Input
+
+- **`MaterialInput`**: Input untuk material.
+  - `materialId`: `String`
+  - `name`: `String!` (Wajib)
+  - `description`: `String`
+  - `category`: `String!` (Wajib)
+  - `type`: `String!` (Wajib)
+  - `unit`: `String!` (Wajib)
+  - `stockQuantity`: `Float`
+  - `reorderLevel`: `Float`
+  - `price`: `Float`
+  - `leadTime`: `Int`
+  - `location`: `String`
+  - `supplierId`: `ID`
+  - `status`: `String`
+  - `notes`: `String`
+- **`SupplierInput`**: Input untuk pemasok.
+  - `supplierId`: `String`
+  - `name`: `String!` (Wajib)
+  - `address`: `String`
+  - `city`: `String`
+  - `state`: `String`
+  - `postalCode`: `String`
+  - `country`: `String`
+  - `contactPerson`: `String`
+  - `phone`: `String`
+  - `email`: `String`
+  - `website`: `String`
+  - `paymentTerms`: `String`
+  - `leadTime`: `Int`
+  - `rating`: `Float`
+  - `status`: `String`
+  - `notes`: `String`
+- **`TransactionInput`**: Input untuk transaksi.
+  - `transactionId`: `String`
+  - `type`: `String!` (Wajib)
+  - `materialId`: `ID!` (Wajib)
+  - `quantity`: `Float!` (Wajib)
+  - `unit`: `String!` (Wajib)
+  - `transactionDate`: `String`
+  - `supplierId`: `ID`
+  - `referenceNumber`: `String`
+  - `unitPrice`: `Float`
+  - `totalPrice`: `Float`
+  - `notes`: `String`
+  - `createdBy`: `String`
+- **`StockCheckInput`**: Input untuk cek stok.
+  - `materialId`: `ID!` (Wajib)
+  - `quantity`: `Float!` (Wajib)
+
+#### Queries
+
+- **`materials(category: String, type: String, status: String, supplierId: ID, lowStock: Boolean)`**: Mendapatkan semua material.
+  - **Argumen:**
+    - `category`: `String` (Opsional, filter kategori).
+    - `type`: `String` (Opsional, filter tipe).
+    - `status`: `String` (Opsional, filter status).
+    - `supplierId`: `ID` (Opsional, filter ID pemasok).
+    - `lowStock`: `Boolean` (Opsional, filter material dengan stok rendah).
+  - **Output:** `[Material]` (Daftar objek Material).
+- **`material(id: ID!)`**: Mendapatkan material berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik material).
+  - **Output:** `Material` (Objek Material).
+- **`materialById(materialId: String!)`**: Mendapatkan material berdasarkan ID material.
+  - **Argumen:**
+    - `materialId`: `String!` (Wajib, ID material unik).
+  - **Output:** `Material` (Objek Material).
+- **`materialCategories`**: Mendapatkan semua kategori material.
+  - **Argumen:** Tidak ada.
+  - **Output:** `[String]` (Daftar kategori material).
+- **`materialTypes`**: Mendapatkan semua tipe material.
+  - **Argumen:** Tidak ada.
+  - **Output:** `[String]` (Daftar tipe material).
+- **`suppliers(status: String)`**: Mendapatkan semua pemasok.
+  - **Argumen:**
+    - `status`: `String` (Opsional, filter status).
+  - **Output:** `[Supplier]` (Daftar objek Supplier).
+- **`supplier(id: ID!)`**: Mendapatkan pemasok berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemasok).
+  - **Output:** `Supplier` (Objek Supplier).
+- **`supplierById(supplierId: String!)`**: Mendapatkan pemasok berdasarkan ID pemasok.
+  - **Argumen:**
+    - `supplierId`: `String!` (Wajib, ID pemasok unik).
+  - **Output:** `Supplier` (Objek Supplier).
+- **`supplierMaterials(id: ID!)`**: Mendapatkan material yang disediakan oleh pemasok tertentu.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemasok).
+  - **Output:** `[Material]` (Daftar objek Material).
+- **`transactions(type: String, materialId: ID, supplierId: ID, startDate: String, endDate: String, limit: Int)`**: Mendapatkan semua transaksi material.
+  - **Argumen:**
+    - `type`: `String` (Opsional, filter tipe transaksi).
+    - `materialId`: `ID` (Opsional, filter ID material).
+    - `supplierId`: `ID` (Opsional, filter ID pemasok).
+    - `startDate`: `String` (Opsional, tanggal mulai).
+    - `endDate`: `String` (Opsional, tanggal akhir).
+    - `limit`: `Int` (Opsional, batas jumlah hasil).
+  - **Output:** `[MaterialTransaction]` (Daftar objek MaterialTransaction).
+- **`transaction(id: ID!)`**: Mendapatkan transaksi berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik transaksi).
+  - **Output:** `MaterialTransaction` (Objek MaterialTransaction).
+- **`materialTransactionHistory(materialId: ID!)`**: Mendapatkan riwayat transaksi untuk material tertentu.
+  - **Argumen:**
+    - `materialId`: `ID!` (Wajib, ID unik material).
+  - **Output:** `[MaterialTransaction]` (Daftar objek MaterialTransaction).
+- **`stockReport(category: String, lowStock: Boolean)`**: Mendapatkan laporan stok material.
+  - **Argumen:**
+    - `category`: `String` (Opsional, filter kategori).
+    - `lowStock`: `Boolean` (Opsional, filter stok rendah).
+  - **Output:** `StockReport` (Objek StockReport).
+- **`supplierPerformance(supplierId: ID)`**: Mendapatkan laporan kinerja pemasok.
+  - **Argumen:**
+    - `supplierId`: `ID` (Opsional, ID pemasok).
+  - **Output:** `[SupplierPerformance]` (Daftar objek SupplierPerformance).
+- **`checkStock(input: [StockCheckInput!]!)`**: Memeriksa ketersediaan stok material.
+  - **Argumen:**
+    - `input`: `[StockCheckInput!]!` (Wajib, daftar material dan jumlah yang diminta).
+  - **Output:** `[StockCheckResult]` (Daftar hasil cek stok).
+
+#### Mutations
+
+- **`createMaterial(input: MaterialInput!)`**: Membuat material baru.
+  - **Argumen:**
+    - `input`: `MaterialInput!` (Wajib, data material baru).
+  - **Output:** `Material` (Objek Material yang baru dibuat).
+- **`updateMaterial(id: ID!, input: MaterialInput!)`**: Memperbarui material.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik material yang akan diperbarui).
+    - `input`: `MaterialInput!` (Wajib, data material yang akan diperbarui).
+  - **Output:** `Material` (Objek Material yang diperbarui).
+- **`deleteMaterial(id: ID!)`**: Menghapus material.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik material yang akan dihapus).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`createSupplier(input: SupplierInput!)`**: Membuat pemasok baru.
+  - **Argumen:**
+    - `input`: `SupplierInput!` (Wajib, data pemasok baru).
+  - **Output:** `Supplier` (Objek Supplier yang baru dibuat).
+- **`updateSupplier(id: ID!, input: SupplierInput!)`**: Memperbarui pemasok.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemasok yang akan diperbarui).
+    - `input`: `SupplierInput!` (Wajib, data pemasok yang akan diperbarui).
+  - **Output:** `Supplier` (Objek Supplier yang diperbarui).
+- **`deleteSupplier(id: ID!)`**: Menghapus pemasok.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemasok yang akan dihapus).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`receiveMaterial(input: TransactionInput!)`**: Membuat transaksi penerimaan material.
+  - **Argumen:**
+    - `input`: `TransactionInput!` (Wajib, data transaksi penerimaan).
+  - **Output:** `MaterialTransaction` (Objek MaterialTransaction yang baru dibuat).
+- **`issueMaterial(input: TransactionInput!)`**: Membuat transaksi pengeluaran material.
+  - **Argumen:**
+    - `input`: `TransactionInput!` (Wajib, data transaksi pengeluaran).
+  - **Output:** `MaterialTransaction` (Objek MaterialTransaction yang baru dibuat).
+- **`createStockAdjustment(input: TransactionInput!)`**: Membuat transaksi penyesuaian stok.
+  - **Argumen:**
+    - `input`: `TransactionInput!` (Wajib, data transaksi penyesuaian).
+  - **Output:** `MaterialTransaction` (Objek MaterialTransaction yang baru dibuat).
+
+### 3. Production Feedback Service
+
+**Endpoint:** `http://localhost:5005/graphql`
+
+#### Tipe Kustom
+
+- **`ProductionStatus`**: Status produksi (`pending`, `in_production`, `on_hold`, `completed`, `cancelled`, `rejected`).
+- **`StepStatus`**: Status langkah produksi (`pending`, `in_progress`, `completed`, `skipped`, `failed`).
+- **`MachineCategory`**: Kategori mesin (`cutting`, `milling`, `drilling`, `turning`, `grinding`, `welding`, `assembly`, `inspection`, `packaging`, `other`).
+- **`QualityResult`**: Hasil pemeriksaan kualitas (`pending`, `pass`, `fail`, `conditional_pass`, `needs_rework`).
+- **`ImageType`**: Jenis gambar (`product`, `machine`, `defect`, `material`, `document`, `other`).
+- **`CommentType`**: Jenis komentar (`internal`, `customer`, `marketplace`, `system`).
+- **`NotificationType`**: Jenis notifikasi (`status_change`, `quality_issue`, `step_completion`, `comment`, `system`).
+- **`NotificationPriority`**: Prioritas notifikasi (`low`, `medium`, `high`, `critical`).
+- **`DeliveryMethod`**: Metode pengiriman notifikasi (`in_app`, `email`, `both`).
+- **`ProductionFeedback`** (Feedback Produksi):
+  - `id`: `ID!` (Wajib)
+  - `feedbackId`: `String!` (Wajib)
+  - `batchId`: `String!` (Wajib)
+  - `orderId`: `String`
+  - `productId`: `String`
+  - `productName`: `String!` (Wajib)
+  - `productionPlanId`: `String`
+  - `status`: `ProductionStatus!` (Wajib)
+  - `plannedQuantity`: `Int!` (Wajib)
+  - `actualQuantity`: `Int`
+  - `defectQuantity`: `Int`
+  - `qualityScore`: `Float`
+  - `startDate`: `String`
+  - `endDate`: `String`
+  - `isMarketplaceUpdated`: `Boolean!` (Wajib)
+  - `marketplaceUpdateDate`: `String`
+  - `notes`: `String`
+  - `createdBy`: `String`
+  - `updatedBy`: `String`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+  - `steps`: `[ProductionStep]` (Langkah-langkah produksi terkait)
+  - `qualityChecks`: `[QualityCheck]` (Pemeriksaan kualitas terkait)
+  - `images`: `[FeedbackImage]` (Gambar terkait)
+  - `comments`: `[FeedbackComment]` (Komentar terkait)
+  - `notifications`: `[FeedbackNotification]` (Notifikasi terkait)
+- **`ProductionStep`** (Langkah Produksi):
+  - `id`: `ID!` (Wajib)
+  - `stepId`: `String!` (Wajib)
+  - `feedbackId`: `String!` (Wajib)
+  - `stepName`: `String!` (Wajib)
+  - `stepOrder`: `Int!` (Wajib)
+  - `machineId`: `String`
+  - `machineName`: `String`
+  - `machineCategory`: `MachineCategory`
+  - `operatorId`: `String`
+  - `operatorName`: `String`
+  - `status`: `StepStatus!` (Wajib)
+  - `startTime`: `String`
+  - `endTime`: `String`
+  - `duration`: `Int`
+  - `plannedQuantity`: `Int!` (Wajib)
+  - `actualQuantity`: `Int`
+  - `defectQuantity`: `Int`
+  - `notes`: `String`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+  - `feedback`: `ProductionFeedback`
+  - `qualityChecks`: `[QualityCheck]`
+  - `images`: `[FeedbackImage]`
+- **`QualityCheck`** (Pemeriksaan Kualitas):
+  - `id`: `ID!` (Wajib)
+  - `checkId`: `String!` (Wajib)
+  - `feedbackId`: `String!` (Wajib)
+  - `stepId`: `String`
+  - `checkName`: `String!` (Wajib)
+  - `checkType`: `String!` (Wajib)
+  - `checkDate`: `String!` (Wajib)
+  - `inspectorId`: `String`
+  - `inspectorName`: `String`
+  - `result`: `QualityResult!` (Wajib)
+  - `measurements`: `String`
+  - `standardValue`: `String`
+  - `actualValue`: `String`
+  - `tolerance`: `String`
+  - `deviationPercentage`: `Float`
+  - `notes`: `String`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+  - `feedback`: `ProductionFeedback`
+  - `step`: `ProductionStep`
+  - `images`: `[FeedbackImage]`
+- **`FeedbackImage`** (Gambar Feedback):
+  - `id`: `ID!` (Wajib)
+  - `imageId`: `String!` (Wajib)
+  - `feedbackId`: `String!` (Wajib)
+  - `stepId`: `String`
+  - `qualityCheckId`: `String`
+  - `imageType`: `ImageType!` (Wajib)
+  - `title`: `String!` (Wajib)
+  - `description`: `String`
+  - `filePath`: `String!` (Wajib)
+  - `fileUrl`: `String!` (Wajib)
+  - `fileType`: `String!` (Wajib)
+  - `fileSize`: `Int!` (Wajib)
+  - `uploadedBy`: `String`
+  - `uploadDate`: `String!` (Wajib)
+  - `isPublic`: `Boolean!` (Wajib)
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+  - `feedback`: `ProductionFeedback`
+  - `step`: `ProductionStep`
+  - `qualityCheck`: `QualityCheck`
+- **`FeedbackComment`** (Komentar Feedback):
+  - `id`: `ID!` (Wajib)
+  - `commentId`: `String!` (Wajib)
+  - `feedbackId`: `String!` (Wajib)
+  - `commentType`: `CommentType!` (Wajib)
+  - `content`: `String!` (Wajib)
+  - `userId`: `String`
+  - `userName`: `String`
+  - `userRole`: `String`
+  - `isImportant`: `Boolean!` (Wajib)
+  - `parentCommentId`: `String`
+  - `isEdited`: `Boolean!` (Wajib)
+  - `isDeleted`: `Boolean!` (Wajib)
+  - `visibleToCustomer`: `Boolean!` (Wajib)
+  - `visibleToMarketplace`: `Boolean!` (Wajib)
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+  - `feedback`: `ProductionFeedback`
+  - `parentComment`: `FeedbackComment`
+  - `replies`: `[FeedbackComment]`
+- **`FeedbackNotification`** (Notifikasi Feedback):
+  - `id`: `ID!` (Wajib)
+  - `notificationId`: `String!` (Wajib)
+  - `feedbackId`: `String!` (Wajib)
+  - `type`: `NotificationType!` (Wajib)
+  - `title`: `String!` (Wajib)
+  - `message`: `String!` (Wajib)
+  - `recipientType`: `String!` (Wajib)
+  - `recipientId`: `String!` (Wajib)
+  - `isRead`: `Boolean!` (Wajib)
+  - `isDelivered`: `Boolean!` (Wajib)
+  - `priority`: `NotificationPriority!` (Wajib)
+  - `deliveryMethod`: `DeliveryMethod!` (Wajib)
+  - `createdBy`: `String`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+  - `feedback`: `ProductionFeedback`
+- **`PaginatedFeedback`** (Feedback dengan Paginasi):
+  - `totalItems`: `Int!` (Wajib, Total item)
+  - `totalPages`: `Int!` (Wajib, Total halaman)
+  - `currentPage`: `Int!` (Wajib, Halaman saat ini)
+  - `items`: `[ProductionFeedback]!` (Wajib, Daftar item feedback)
+- **`ProductionSummary`** (Ringkasan Produksi):
+  - `totalBatches`: `Int!` (Wajib)
+  - `completedBatches`: `Int!` (Wajib)
+  - `inProductionBatches`: `Int!` (Wajib)
+  - `onHoldBatches`: `Int!` (Wajib)
+  - `cancelledBatches`: `Int!` (Wajib)
+  - `totalPlannedQuantity`: `Int!` (Wajib)
+  - `totalActualQuantity`: `Int!` (Wajib)
+  - `totalDefectQuantity`: `Int!` (Wajib)
+  - `averageQualityScore`: `Float!` (Wajib)
+  - `timeframe`: `String!` (Wajib)
+- **`GenericResponse`** (Respons Generik):
+  - `success`: `Boolean!` (Wajib, Status keberhasilan)
+  - `message`: `String` (Pesan)
+  - `id`: `ID` (ID terkait)
+
+#### Tipe Input
+
+- **`PaginationInput`**: Input untuk paginasi.
+  - `page`: `Int` (Nomor halaman)
+  - `limit`: `Int` (Batas jumlah item per halaman)
+- **`FeedbackFilterInput`**: Filter untuk feedback.
+  - `status`: `ProductionStatus`
+  - `startDate`: `String`
+  - `endDate`: `String`
+  - `batchId`: `String`
+  - `orderId`: `String`
+  - `productId`: `String`
+  - `productName`: `String`
+- **`ProductionFeedbackInput`**: Input untuk ProductionFeedback.
+  - `batchId`: `String!` (Wajib)
+  - `orderId`: `String`
+  - `productId`: `String`
+  - `productName`: `String!` (Wajib)
+  - `productionPlanId`: `String`
+  - `status`: `ProductionStatus!` (Wajib)
+  - `plannedQuantity`: `Int!` (Wajib)
+  - `actualQuantity`: `Int`
+  - `defectQuantity`: `Int`
+  - `qualityScore`: `Float`
+  - `startDate`: `String`
+  - `endDate`: `String`
+  - `notes`: `String`
+- **`ProductionStepInput`**: Input untuk ProductionStep.
+  - `feedbackId`: `String!` (Wajib)
+  - `stepName`: `String!` (Wajib)
+  - `stepOrder`: `Int!` (Wajib)
+  - `machineId`: `String`
+  - `machineName`: `String`
+  - `machineCategory`: `MachineCategory`
+  - `operatorId`: `String`
+  - `operatorName`: `String`
+  - `status`: `StepStatus!` (Wajib)
+  - `startTime`: `String`
+  - `endTime`: `String`
+  - `plannedQuantity`: `Int!` (Wajib)
+  - `actualQuantity`: `Int`
+  - `defectQuantity`: `Int`
+  - `notes`: `String`
+- **`QualityCheckInput`**: Input untuk QualityCheck.
+  - `feedbackId`: `String!` (Wajib)
+  - `stepId`: `String`
+  - `checkName`: `String!` (Wajib)
+  - `checkType`: `String!` (Wajib)
+  - `checkDate`: `String!` (Wajib)
+  - `inspectorId`: `String`
+  - `inspectorName`: `String`
+  - `result`: `QualityResult!` (Wajib)
+  - `measurements`: `String`
+  - `standardValue`: `String`
+  - `actualValue`: `String`
+  - `tolerance`: `String`
+  - `deviationPercentage`: `Float`
+  - `notes`: `String`
+- **`FeedbackCommentInput`**: Input untuk FeedbackComment.
+  - `feedbackId`: `String!` (Wajib)
+  - `commentType`: `CommentType!` (Wajib)
+  - `content`: `String!` (Wajib)
+  - `isImportant`: `Boolean`
+  - `parentCommentId`: `String`
+  - `visibleToCustomer`: `Boolean`
+  - `visibleToMarketplace`: `Boolean`
+
+#### Queries
+
+- **`getFeedbackById(id: ID!)`**: Mendapatkan feedback berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik feedback).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback).
+- **`getFeedbackByFeedbackId(feedbackId: String!)`**: Mendapatkan feedback berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback unik).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback).
+- **`getFeedbackByBatchId(batchId: String!)`**: Mendapatkan feedback berdasarkan batch ID.
+  - **Argumen:**
+    - `batchId`: `String!` (Wajib, ID batch).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback).
+- **`getFeedbackByOrderId(orderId: String!)`**: Mendapatkan feedback berdasarkan order ID.
+  - **Argumen:**
+    - `orderId`: `String!` (Wajib, ID order).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback).
+- **`getAllFeedback(pagination: PaginationInput, filters: FeedbackFilterInput)`**: Mendapatkan semua feedback dengan paginasi dan filter.
+  - **Argumen:**
+    - `pagination`: `PaginationInput` (Opsional, untuk paginasi).
+    - `filters`: `FeedbackFilterInput` (Opsional, untuk filter).
+  - **Output:** `PaginatedFeedback` (Objek PaginatedFeedback).
+- **`getProductionSummary(timeframe: String)`**: Mendapatkan ringkasan produksi untuk rentang waktu tertentu.
+  - **Argumen:**
+    - `timeframe`: `String` (Opsional, misal "daily", "weekly", "monthly", "yearly").
+  - **Output:** `ProductionSummary` (Objek ProductionSummary).
+- **`getStepById(id: ID!)`**: Mendapatkan langkah produksi berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik langkah).
+  - **Output:** `ProductionStep` (Objek ProductionStep).
+- **`getStepByStepId(stepId: String!)`**: Mendapatkan langkah produksi berdasarkan step ID.
+  - **Argumen:**
+    - `stepId`: `String!` (Wajib, ID langkah unik).
+  - **Output:** `ProductionStep` (Objek ProductionStep).
+- **`getStepsByFeedbackId(feedbackId: String!)`**: Mendapatkan langkah-langkah produksi berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[ProductionStep]` (Daftar objek ProductionStep).
+- **`getQualityCheckById(id: ID!)`**: Mendapatkan pemeriksaan kualitas berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemeriksaan kualitas).
+  - **Output:** `QualityCheck` (Objek QualityCheck).
+- **`getQualityCheckByCheckId(checkId: String!)`**: Mendapatkan pemeriksaan kualitas berdasarkan check ID.
+  - **Argumen:**
+    - `checkId`: `String!` (Wajib, ID pemeriksaan kualitas unik).
+  - **Output:** `QualityCheck` (Objek QualityCheck).
+- **`getQualityChecksByFeedbackId(feedbackId: String!)`**: Mendapatkan pemeriksaan kualitas berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[QualityCheck]` (Daftar objek QualityCheck).
+- **`getQualityChecksByStepId(stepId: String!)`**: Mendapatkan pemeriksaan kualitas berdasarkan step ID.
+  - **Argumen:**
+    - `stepId`: `String!` (Wajib, ID langkah produksi).
+  - **Output:** `[QualityCheck]` (Daftar objek QualityCheck).
+- **`getQualitySummary(feedbackId: String!)`**: Mendapatkan ringkasan kualitas untuk feedback tertentu.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `QualityCheck` (Objek QualityCheck - mungkin ini harusnya tipe `QualitySummary` tersendiri).
+- **`getImageById(id: ID!)`**: Mendapatkan gambar feedback berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik gambar).
+  - **Output:** `FeedbackImage` (Objek FeedbackImage).
+- **`getImageByImageId(imageId: String!)`**: Mendapatkan gambar feedback berdasarkan image ID.
+  - **Argumen:**
+    - `imageId`: `String!` (Wajib, ID gambar unik).
+  - **Output:** `FeedbackImage` (Objek FeedbackImage).
+- **`getImagesByFeedbackId(feedbackId: String!)`**: Mendapatkan gambar feedback berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[FeedbackImage]` (Daftar objek FeedbackImage).
+- **`getImagesByStepId(stepId: String!)`**: Mendapatkan gambar feedback berdasarkan step ID.
+  - **Argumen:**
+    - `stepId`: `String!` (Wajib, ID langkah produksi).
+  - **Output:** `[FeedbackImage]` (Daftar objek FeedbackImage).
+- **`getImagesByQualityCheckId(qualityCheckId: String!)`**: Mendapatkan gambar feedback berdasarkan quality check ID.
+  - **Argumen:**
+    - `qualityCheckId`: `String!` (Wajib, ID pemeriksaan kualitas).
+  - **Output:** `[FeedbackImage]` (Daftar objek FeedbackImage).
+- **`getPublicImages(feedbackId: String!)`**: Mendapatkan gambar publik berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[FeedbackImage]` (Daftar objek FeedbackImage).
+- **`getCommentById(id: ID!)`**: Mendapatkan komentar berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik komentar).
+  - **Output:** `FeedbackComment` (Objek FeedbackComment).
+- **`getCommentsByFeedbackId(feedbackId: String!)`**: Mendapatkan komentar berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[FeedbackComment]` (Daftar objek FeedbackComment).
+- **`getCommentReplies(parentCommentId: String!)`**: Mendapatkan balasan komentar berdasarkan ID komentar induk.
+  - **Argumen:**
+    - `parentCommentId`: `String!` (Wajib, ID komentar induk).
+  - **Output:** `[FeedbackComment]` (Daftar objek FeedbackComment).
+- **`getPublicComments(feedbackId: String!)`**: Mendapatkan komentar publik berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[FeedbackComment]` (Daftar objek FeedbackComment).
+- **`getCustomerComments(feedbackId: String!)`**: Mendapatkan komentar pelanggan berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[FeedbackComment]` (Daftar objek FeedbackComment).
+- **`getNotificationById(notificationId: String!)`**: Mendapatkan notifikasi berdasarkan ID notifikasi.
+  - **Argumen:**
+    - `notificationId`: `String!` (Wajib, ID notifikasi unik).
+  - **Output:** `FeedbackNotification` (Objek FeedbackNotification).
+- **`getNotificationsByFeedbackId(feedbackId: String!)`**: Mendapatkan notifikasi berdasarkan feedback ID.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `[FeedbackNotification]` (Daftar objek FeedbackNotification).
+- **`getNotificationsByRecipient(recipientType: String!, recipientId: String!)`**: Mendapatkan notifikasi berdasarkan tipe dan ID penerima.
+  - **Argumen:**
+    - `recipientType`: `String!` (Wajib, Tipe penerima).
+    - `recipientId`: `String!` (Wajib, ID penerima).
+  - **Output:** `[FeedbackNotification]` (Daftar objek FeedbackNotification).
+- **`getUnreadNotificationCount(recipientType: String!, recipientId: String!)`**: Mendapatkan jumlah notifikasi yang belum dibaca.
+  - **Argumen:**
+    - `recipientType`: `String!` (Wajib, Tipe penerima).
+    - `recipientId`: `String!` (Wajib, ID penerima).
+  - **Output:** `Int` (Jumlah notifikasi belum dibaca).
+
+#### Mutations
+
+- **`createFeedback(input: ProductionFeedbackInput!)`**: Membuat feedback baru.
+  - **Argumen:**
+    - `input`: `ProductionFeedbackInput!` (Wajib, data feedback baru).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback yang baru dibuat).
+- **`updateFeedback(id: ID!, input: ProductionFeedbackInput!)`**: Memperbarui feedback.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik feedback yang akan diperbarui).
+    - `input`: `ProductionFeedbackInput!` (Wajib, data feedback yang akan diperbarui).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback yang diperbarui).
+- **`updateFeedbackStatus(id: ID!, status: ProductionStatus!)`**: Memperbarui status feedback.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik feedback).
+    - `status`: `ProductionStatus!` (Wajib, status baru).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback yang diperbarui).
+- **`updateFeedbackQuantities(id: ID!, actualQuantity: Int, defectQuantity: Int)`**: Memperbarui jumlah aktual dan cacat pada feedback.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik feedback).
+    - `actualQuantity`: `Int` (Opsional, jumlah aktual).
+    - `defectQuantity`: `Int` (Opsional, jumlah cacat).
+  - **Output:** `ProductionFeedback` (Objek ProductionFeedback yang diperbarui).
+- **`deleteFeedback(id: ID!)`**: Menghapus feedback.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik feedback).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`sendMarketplaceUpdate(feedbackId: String!)`**: Mengirim pembaruan ke marketplace.
+  - **Argumen:**
+    - `feedbackId`: `String!` (Wajib, ID feedback).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`createStep(input: ProductionStepInput!)`**: Membuat langkah produksi baru.
+  - **Argumen:**
+    - `input`: `ProductionStepInput!` (Wajib, data langkah produksi baru).
+  - **Output:** `ProductionStep` (Objek ProductionStep yang baru dibuat).
+- **`createBatchSteps(steps: [ProductionStepInput!]!)`**: Membuat beberapa langkah produksi dalam satu batch.
+  - **Argumen:**
+    - `steps`: `[ProductionStepInput!]!` (Wajib, daftar data langkah produksi).
+  - **Output:** `[ProductionStep]` (Daftar objek ProductionStep yang baru dibuat).
+- **`updateStep(id: ID!, input: ProductionStepInput!)`**: Memperbarui langkah produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik langkah produksi).
+    - `input`: `ProductionStepInput!` (Wajib, data langkah produksi yang akan diperbarui).
+  - **Output:** `ProductionStep` (Objek ProductionStep yang diperbarui).
+- **`updateStepStatus(id: ID!, status: StepStatus!)`**: Memperbarui status langkah produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik langkah produksi).
+    - `status`: `StepStatus!` (Wajib, status baru).
+  - **Output:** `ProductionStep` (Objek ProductionStep yang diperbarui).
+- **`updateStepTiming(id: ID!, startTime: String, endTime: String)`**: Memperbarui waktu mulai dan selesai langkah produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik langkah produksi).
+    - `startTime`: `String` (Opsional, waktu mulai).
+    - `endTime`: `String` (Opsional, waktu selesai).
+  - **Output:** `ProductionStep` (Objek ProductionStep yang diperbarui).
+- **`deleteStep(id: ID!)`**: Menghapus langkah produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik langkah produksi).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`createQualityCheck(input: QualityCheckInput!)`**: Membuat pemeriksaan kualitas baru.
+  - **Argumen:**
+    - `input`: `QualityCheckInput!` (Wajib, data pemeriksaan kualitas baru).
+  - **Output:** `QualityCheck` (Objek QualityCheck yang baru dibuat).
+- **`createBatchQualityChecks(checks: [QualityCheckInput!]!)`**: Membuat beberapa pemeriksaan kualitas dalam satu batch.
+  - **Argumen:**
+    - `checks`: `[QualityCheckInput!]!` (Wajib, daftar data pemeriksaan kualitas).
+  - **Output:** `[QualityCheck]` (Daftar objek QualityCheck yang baru dibuat).
+- **`updateQualityCheck(id: ID!, input: QualityCheckInput!)`**: Memperbarui pemeriksaan kualitas.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemeriksaan kualitas).
+    - `input`: `QualityCheckInput!` (Wajib, data pemeriksaan kualitas yang akan diperbarui).
+  - **Output:** `QualityCheck` (Objek QualityCheck yang diperbarui).
+- **`updateQualityResult(id: ID!, result: QualityResult!, notes: String)`**: Memperbarui hasil pemeriksaan kualitas.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemeriksaan kualitas).
+    - `result`: `QualityResult!` (Wajib, hasil baru).
+    - `notes`: `String` (Opsional, catatan).
+  - **Output:** `QualityCheck` (Objek QualityCheck yang diperbarui).
+- **`deleteQualityCheck(id: ID!)`**: Menghapus pemeriksaan kualitas.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pemeriksaan kualitas).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`createComment(input: FeedbackCommentInput!)`**: Membuat komentar baru.
+  - **Argumen:**
+    - `input`: `FeedbackCommentInput!` (Wajib, data komentar baru).
+  - **Output:** `FeedbackComment` (Objek FeedbackComment yang baru dibuat).
+- **`updateComment(id: ID!, content: String!, isImportant: Boolean, visibleToCustomer: Boolean, visibleToMarketplace: Boolean)`**: Memperbarui komentar.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik komentar).
+    - `content`: `String!` (Wajib, konten komentar baru).
+    - `isImportant`: `Boolean` (Opsional, apakah penting).
+    - `visibleToCustomer`: `Boolean` (Opsional, terlihat oleh pelanggan).
+    - `visibleToMarketplace`: `Boolean` (Opsional, terlihat di marketplace).
+  - **Output:** `FeedbackComment` (Objek FeedbackComment yang diperbarui).
+- **`deleteComment(id: ID!)`**: Menghapus komentar.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik komentar).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`markNotificationAsRead(notificationId: String!)`**: Menandai notifikasi sebagai sudah dibaca.
+  - **Argumen:**
+    - `notificationId`: `String!` (Wajib, ID notifikasi unik).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`markMultipleNotificationsAsRead(notificationIds: [String!]!)`**: Menandai beberapa notifikasi sebagai sudah dibaca.
+  - **Argumen:**
+    - `notificationIds`: `[String!]!` (Wajib, daftar ID notifikasi).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`sendEmailNotification(notificationId: String!)`**: Mengirim notifikasi melalui email.
+  - **Argumen:**
+    - `notificationId`: `String!` (Wajib, ID notifikasi unik).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+- **`deleteNotification(notificationId: String!)`**: Menghapus notifikasi.
+  - **Argumen:**
+    - `notificationId`: `String!` (Wajib, ID notifikasi unik).
+  - **Output:** `GenericResponse` (Respons generik keberhasilan).
+
+### 4. Production Management Service
+
+**Endpoint:** `http://localhost:5001/graphql`
+
+#### Tipe Kustom
+
+- **`RequestStatus`**: Status permintaan (`received`, `planned`, `in_production`, `completed`, `cancelled`).
+- **`BatchStatus`**: Status batch (`pending`, `scheduled`, `in_progress`, `completed`, `cancelled`).
+- **`StepStatus`**: Status langkah (`pending`, `scheduled`, `in_progress`, `completed`, `cancelled`).
+- **`MaterialStatus`**: Status material (`pending`, `partial`, `allocated`, `consumed`).
+- **`Priority`**: Prioritas (`low`, `normal`, `high`, `urgent`).
+- **`ProductionRequest`** (Permintaan Produksi):
+  - `id`: `ID!` (Wajib)
+  - `requestId`: `String!` (Wajib)
+  - `customerId`: `String!` (Wajib)
+  - `productName`: `String!` (Wajib)
+  - `quantity`: `Int!` (Wajib)
+  - `priority`: `Priority!` (Wajib)
+  - `dueDate`: `String!` (Wajib)
+  - `specifications`: `String`
+  - `status`: `RequestStatus!` (Wajib)
+  - `marketplaceData`: `String`
+  - `batches`: `[ProductionBatch]`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+- **`ProductionBatch`** (Batch Produksi):
+  - `id`: `ID!` (Wajib)
+  - `batchNumber`: `String!` (Wajib)
+  - `requestId`: `Int!` (Wajib)
+  - `scheduledStartDate`: `String`
+  - `scheduledEndDate`: `String`
+  - `actualStartDate`: `String`
+  - `actualEndDate`: `String`
+  - `quantity`: `Int!` (Wajib)
+  - `status`: `BatchStatus!` (Wajib)
+  - `materialsAssigned`: `Boolean!` (Wajib)
+  - `machineAssigned`: `Boolean!` (Wajib)
+  - `notes`: `String`
+  - `request`: `ProductionRequest`
+  - `steps`: `[ProductionStep]`
+  - `materialAllocations`: `[MaterialAllocation]`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+- **`ProductionStep`** (Langkah Produksi):
+  - `id`: `ID!` (Wajib)
+  - `batchId`: `Int!` (Wajib)
+  - `stepName`: `String!` (Wajib)
+  - `stepOrder`: `Int!` (Wajib)
+  - `machineType`: `String`
+  - `scheduledStartTime`: `String`
+  - `scheduledEndTime`: `String`
+  - `actualStartTime`: `String`
+  - `actualEndTime`: `String`
+  - `machineId`: `Int`
+  - `operatorId`: `Int`
+  - `status`: `StepStatus!` (Wajib)
+  - `notes`: `String`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+  - `feedback`: `ProductionFeedback`
+  - `qualityChecks`: `[QualityCheck]`
+  - `images`: `[FeedbackImage]`
+- **`MaterialAllocation`** (Alokasi Material):
+  - `id`: `ID!` (Wajib)
+  - `batchId`: `Int!` (Wajib)
+  - `materialId`: `Int!` (Wajib)
+  - `quantityRequired`: `Float!` (Wajib)
+  - `quantityAllocated`: `Float!` (Wajib)
+  - `unitOfMeasure`: `String!` (Wajib)
+  - `status`: `MaterialStatus!` (Wajib)
+  - `allocationDate`: `String`
+  - `notes`: `String`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+
+#### Tipe Input
+
+- **`ProductionRequestInput`**: Input untuk permintaan produksi baru.
+  - `requestId`: `String!` (Wajib)
+  - `customerId`: `String!` (Wajib)
+  - `productName`: `String!` (Wajib)
+  - `quantity`: `Int!` (Wajib)
+  - `priority`: `Priority!` (Wajib)
+  - `dueDate`: `String!` (Wajib)
+  - `specifications`: `String`
+  - `marketplaceData`: `String`
+- **`ProductionRequestUpdateInput`**: Input untuk memperbarui permintaan produksi.
+  - `customerId`: `String`
+  - `productName`: `String`
+  - `quantity`: `Int`
+  - `priority`: `Priority`
+  - `dueDate`: `String`
+  - `specifications`: `String`
+  - `status`: `RequestStatus`
+  - `marketplaceData`: `String`
+- **`ProductionStepInput`**: Input untuk langkah produksi.
+  - `stepName`: `String!` (Wajib)
+  - `machineType`: `String`
+  - `scheduledStartTime`: `String`
+  - `scheduledEndTime`: `String`
+- **`MaterialInput`**: Input untuk material dalam batch.
+  - `materialId`: `Int!` (Wajib)
+  - `quantityRequired`: `Float!` (Wajib)
+  - `unitOfMeasure`: `String!` (Wajib)
+- **`ProductionBatchInput`**: Input untuk batch produksi baru.
+  - `requestId`: `Int!` (Wajib)
+  - `quantity`: `Int!` (Wajib)
+  - `scheduledStartDate`: `String`
+  - `scheduledEndDate`: `String`
+  - `notes`: `String`
+  - `steps`: `[ProductionStepInput]` (Daftar langkah produksi)
+  - `materials`: `[MaterialInput]` (Daftar material yang dibutuhkan)
+- **`ProductionBatchUpdateInput`**: Input untuk memperbarui batch produksi.
+  - `scheduledStartDate`: `String`
+  - `scheduledEndDate`: `String`
+  - `actualStartDate`: `String`
+  - `actualEndDate`: `String`
+  - `status`: `BatchStatus`
+  - `notes`: `String`
+- **`ProductionStepUpdateInput`**: Input untuk memperbarui langkah produksi.
+  - `machineId`: `Int`
+  - `operatorId`: `Int`
+  - `actualStartTime`: `String`
+  - `actualEndTime`: `String`
+  - `status`: `StepStatus`
+  - `notes`: `String`
+
+#### Queries
+
+- **`productionRequests`**: Mendapatkan semua permintaan produksi.
+  - **Argumen:** Tidak ada.
+  - **Output:** `[ProductionRequest]` (Daftar objek ProductionRequest).
+- **`productionRequest(id: ID!)`**: Mendapatkan permintaan produksi berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik permintaan produksi).
+  - **Output:** `ProductionRequest` (Objek ProductionRequest).
+- **`productionRequestsByStatus(status: RequestStatus!)`**: Mendapatkan permintaan produksi berdasarkan status.
+  - **Argumen:**
+    - `status`: `RequestStatus!` (Wajib, status permintaan).
+  - **Output:** `[ProductionRequest]` (Daftar objek ProductionRequest).
+- **`productionBatches`**: Mendapatkan semua batch produksi.
+  - **Argumen:** Tidak ada.
+  - **Output:** `[ProductionBatch]` (Daftar objek ProductionBatch).
+- **`productionBatch(id: ID!)`**: Mendapatkan batch produksi berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik batch produksi).
+  - **Output:** `ProductionBatch` (Objek ProductionBatch).
+- **`productionBatchesByRequest(requestId: ID!)`**: Mendapatkan batch produksi berdasarkan ID permintaan.
+  - **Argumen:**
+    - `requestId`: `ID!` (Wajib, ID permintaan produksi).
+  - **Output:** `[ProductionBatch]` (Daftar objek ProductionBatch).
+- **`productionBatchesByStatus(status: BatchStatus!)`**: Mendapatkan batch produksi berdasarkan status.
+  - **Argumen:**
+    - `status`: `BatchStatus!` (Wajib, status batch).
+  - **Output:** `[ProductionBatch]` (Daftar objek ProductionBatch).
+- **`productionStepsByBatch(batchId: ID!)`**: Mendapatkan langkah-langkah produksi berdasarkan ID batch.
+  - **Argumen:**
+    - `batchId`: `ID!` (Wajib, ID batch produksi).
+  - **Output:** `[ProductionStep]` (Daftar objek ProductionStep).
+- **`productionStep(id: ID!)`**: Mendapatkan langkah produksi berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik langkah produksi).
+  - **Output:** `ProductionStep` (Objek ProductionStep).
+- **`materialAllocationsByBatch(batchId: ID!)`**: Mendapatkan alokasi material berdasarkan ID batch.
+  - **Argumen:**
+    - `batchId`: `ID!` (Wajib, ID batch produksi).
+  - **Output:** `[MaterialAllocation]` (Daftar objek MaterialAllocation).
+
+#### Mutations
+
+- **`createProductionRequest(input: ProductionRequestInput!)`**: Membuat permintaan produksi baru.
+  - **Argumen:**
+    - `input`: `ProductionRequestInput!` (Wajib, data permintaan produksi baru).
+  - **Output:** `ProductionRequest` (Objek ProductionRequest yang baru dibuat).
+- **`updateProductionRequest(id: ID!, input: ProductionRequestUpdateInput!)`**: Memperbarui permintaan produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik permintaan produksi).
+    - `input`: `ProductionRequestUpdateInput!` (Wajib, data permintaan produksi yang akan diperbarui).
+  - **Output:** `ProductionRequest` (Objek ProductionRequest yang diperbarui).
+- **`cancelProductionRequest(id: ID!)`**: Membatalkan permintaan produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik permintaan produksi).
+  - **Output:** `ProductionRequest` (Objek ProductionRequest yang dibatalkan).
+- **`createProductionBatch(input: ProductionBatchInput!)`**: Membuat batch produksi baru.
+  - **Argumen:**
+    - `input`: `ProductionBatchInput!` (Wajib, data batch produksi baru).
+  - **Output:** `ProductionBatch` (Objek ProductionBatch yang baru dibuat).
+- **`updateProductionBatch(id: ID!, input: ProductionBatchUpdateInput!)`**: Memperbarui batch produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik batch produksi).
+    - `input`: `ProductionBatchUpdateInput!` (Wajib, data batch produksi yang akan diperbarui).
+  - **Output:** `ProductionBatch` (Objek ProductionBatch yang diperbarui).
+- **`updateProductionStep(id: ID!, input: ProductionStepUpdateInput!)`**: Memperbarui langkah produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik langkah produksi).
+    - `input`: `ProductionStepUpdateInput!` (Wajib, data langkah produksi yang akan diperbarui).
+  - **Output:** `ProductionStep` (Objek ProductionStep yang diperbarui).
+
+### 5. Production Planning Service
+
+**Endpoint:** `http://localhost:5002/graphql`
+
+#### Tipe Kustom
+
+- **`SuccessResponse`** (Respons Keberhasilan):
+  - `success`: `Boolean`
+  - `message`: `String`
+- **`ApproveResponse`** (Respons Persetujuan):
+  - `success`: `Boolean`
+  - `message`: `String`
+  - `plan`: `ProductionPlan`
+  - `batchCreated`: `BatchResponse`
+- **`BatchResponse`** (Respons Batch):
+  - `id`: `Int`
+  - `batchNumber`: `String`
+- **`ProductionPlan`** (Rencana Produksi):
+  - `id`: `ID`
+  - `planId`: `String`
+  - `requestId`: `Int`
+  - `productionRequestId`: `String`
+  - `productName`: `String`
+  - `plannedStartDate`: `String`
+  - `plannedEndDate`: `String`
+  - `priority`: `String`
+  - `status`: `String`
+  - `planningNotes`: `String`
+  - `totalCapacityRequired`: `Float`
+  - `totalMaterialCost`: `Float`
+  - `plannedBatches`: `Int`
+  - `approvedBy`: `String`
+  - `approvalDate`: `String`
+  - `createdAt`: `String`
+  - `updatedAt`: `String`
+  - `capacityPlans`: `[CapacityPlan]`
+  - `materialPlans`: `[MaterialPlan]`
+- **`CapacityPlan`** (Rencana Kapasitas):
+  - `id`: `ID`
+  - `planId`: `Int`
+  - `machineType`: `String`
+  - `hoursRequired`: `Float`
+  - `startDate`: `String`
+  - `endDate`: `String`
+  - `plannedMachineId`: `Int`
+  - `status`: `String`
+  - `notes`: `String`
+  - `createdAt`: `String`
+  - `updatedAt`: `String`
+- **`MaterialPlan`** (Rencana Material):
+  - `id`: `ID`
+  - `planId`: `Int`
+  - `materialId`: `Int`
+  - `materialName`: `String`
+  - `quantityRequired`: `Float`
+  - `unitOfMeasure`: `String`
+  - `unitCost`: `Float`
+  - `totalCost`: `Float`
+  - `status`: `String`
+  - `availabilityChecked`: `Boolean`
+  - `availabilityDate`: `String`
+  - `notes`: `String`
+  - `createdAt`: `String`
+  - `updatedAt`: `String`
+
+#### Tipe Input
+
+- **`PlanInput`**: Input untuk membuat rencana baru.
+  - `requestId`: `Int!` (Wajib)
+  - `productName`: `String!` (Wajib)
+  - `plannedStartDate`: `String`
+  - `plannedEndDate`: `String`
+  - `priority`: `String`
+  - `planningNotes`: `String`
+- **`PlanUpdateInput`**: Input untuk memperbarui rencana.
+  - `productName`: `String`
+  - `plannedStartDate`: `String`
+  - `plannedEndDate`: `String`
+  - `priority`: `String`
+  - `status`: `String`
+  - `planningNotes`: `String`
+  - `totalCapacityRequired`: `Float`
+  - `totalMaterialCost`: `Float`
+  - `plannedBatches`: `Int`
+  - `requestId`: `Int`
+- **`CapacityPlanInput`**: Input untuk rencana kapasitas.
+  - `machineType`: `String!` (Wajib)
+  - `hoursRequired`: `Float!` (Wajib)
+  - `startDate`: `String`
+  - `endDate`: `String`
+  - `plannedMachineId`: `Int`
+  - `notes`: `String`
+- **`CapacityPlanUpdateInput`**: Input untuk memperbarui rencana kapasitas.
+  - `machineType`: `String`
+  - `hoursRequired`: `Float`
+  - `startDate`: `String`
+  - `endDate`: `String`
+  - `plannedMachineId`: `Int`
+  - `notes`: `String`
+  - `status`: `String`
+- **`MaterialPlanInput`**: Input untuk rencana material.
+  - `materialId`: `Int!` (Wajib)
+  - `materialName`: `String!` (Wajib)
+  - `quantityRequired`: `Float!` (Wajib)
+  - `unitOfMeasure`: `String!` (Wajib)
+  - `unitCost`: `Float`
+  - `notes`: `String`
+- **`MaterialPlanUpdateInput`**: Input untuk memperbarui rencana material.
+  - `materialId`: `Int`
+  - `materialName`: `String`
+  - `quantityRequired`: `Float`
+  - `unitOfMeasure`: `String`
+  - `unitCost`: `Float`
+  - `notes`: `String`
+  - `status`: `String`
+  - `availabilityChecked`: `Boolean`
+  - `availabilityDate`: `String`
+
+#### Queries
+
+- **`plans`**: Mendapatkan semua rencana produksi.
+  - **Argumen:** Tidak ada.
+  - **Output:** `[ProductionPlan]` (Daftar objek ProductionPlan).
+- **`plan(id: ID!)`**: Mendapatkan rencana produksi berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana produksi).
+  - **Output:** `ProductionPlan` (Objek ProductionPlan).
+- **`capacityPlans(planId: ID!)`**: Mendapatkan semua rencana kapasitas untuk rencana produksi tertentu.
+  - **Argumen:**
+    - `planId`: `ID!` (Wajib, ID rencana produksi).
+  - **Output:** `[CapacityPlan]` (Daftar objek CapacityPlan).
+- **`capacityPlan(id: ID!)`**: Mendapatkan rencana kapasitas berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana kapasitas).
+  - **Output:** `CapacityPlan` (Objek CapacityPlan).
+- **`materialPlans(planId: ID!)`**: Mendapatkan semua rencana material untuk rencana produksi tertentu.
+  - **Argumen:**
+    - `planId`: `ID!` (Wajib, ID rencana produksi).
+  - **Output:** `[MaterialPlan]` (Daftar objek MaterialPlan).
+
+#### Mutations
+
+- **`createPlan(input: PlanInput)`**: Membuat rencana produksi baru.
+  - **Argumen:**
+    - `input`: `PlanInput` (Opsional, data rencana produksi baru).
+  - **Output:** `ProductionPlan` (Objek ProductionPlan yang baru dibuat).
+- **`updatePlan(id: ID!, input: PlanUpdateInput)`**: Memperbarui rencana produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana produksi).
+    - `input`: `PlanUpdateInput` (Opsional, data rencana produksi yang akan diperbarui).
+  - **Output:** `ProductionPlan` (Objek ProductionPlan yang diperbarui).
+- **`deletePlan(id: ID!)`**: Menghapus rencana produksi.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana produksi).
+  - **Output:** `SuccessResponse` (Respons keberhasilan).
+- **`approvePlan(id: ID!, approvedBy: String!, notes: String)`**: Menyetujui rencana produksi dan membuat batch terkait.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana produksi).
+    - `approvedBy`: `String!` (Wajib, nama atau ID yang menyetujui).
+    - `notes`: `String` (Opsional, catatan persetujuan).
+  - **Output:** `ApproveResponse` (Respons persetujuan dengan detail batch yang dibuat).
+- **`addCapacityPlan(planId: ID!, input: CapacityPlanInput)`**: Menambahkan rencana kapasitas ke rencana produksi.
+  - **Argumen:**
+    - `planId`: `ID!` (Wajib, ID rencana produksi).
+    - `input`: `CapacityPlanInput` (Opsional, data rencana kapasitas baru).
+  - **Output:** `CapacityPlan` (Objek CapacityPlan yang baru dibuat).
+- **`updateCapacityPlan(id: ID!, input: CapacityPlanUpdateInput)`**: Memperbarui rencana kapasitas.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana kapasitas).
+    - `input`: `CapacityPlanUpdateInput` (Opsional, data rencana kapasitas yang akan diperbarui).
+  - **Output:** `CapacityPlan` (Objek CapacityPlan yang diperbarui).
+- **`deleteCapacityPlan(id: ID!)`**: Menghapus rencana kapasitas.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana kapasitas).
+  - **Output:** `SuccessResponse` (Respons keberhasilan).
+- **`addMaterialPlan(planId: ID!, input: MaterialPlanInput)`**: Menambahkan rencana material ke rencana produksi.
+  - **Argumen:**
+    - `planId`: `ID!` (Wajib, ID rencana produksi).
+    - `input`: `MaterialPlanInput` (Opsional, data rencana material baru).
+  - **Output:** `MaterialPlan` (Objek MaterialPlan yang baru dibuat).
+- **`updateMaterialPlan(id: ID!, input: MaterialPlanUpdateInput)`**: Memperbarui rencana material.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana material).
+    - `input`: `MaterialPlanUpdateInput` (Opsional, data rencana material yang akan diperbarui).
+  - **Output:** `MaterialPlan` (Objek MaterialPlan yang diperbarui).
+- **`deleteMaterialPlan(id: ID!)`**: Menghapus rencana material.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik rencana material).
+  - **Output:** `SuccessResponse` (Respons keberhasilan).
+
+### 6. User Service
+
+**Endpoint:** `http://localhost:5006/graphql`
+
+#### Tipe Kustom
+
+- **`User`** (Pengguna):
+  - `id`: `ID!` (Wajib)
+  - `username`: `String!` (Wajib)
+  - `email`: `String!` (Wajib)
+  - `fullName`: `String`
+  - `role`: `String!` (Wajib)
+  - `status`: `String!` (Wajib)
+  - `lastLogin`: `String`
+  - `createdAt`: `String!` (Wajib)
+  - `updatedAt`: `String!` (Wajib)
+- **`AuthResponse`** (Respons Otentikasi):
+  - `token`: `String!` (Wajib)
+  - `user`: `User!` (Wajib)
+- **`VerifyResponse`** (Respons Verifikasi):
+  - `valid`: `Boolean!` (Wajib)
+  - `user`: `User`
+  - `message`: `String`
+
+#### Queries
+
+- **`users`**: Mendapatkan semua pengguna.
+  - **Argumen:** Tidak ada.
+  - **Output:** `[User!]!` (Daftar objek User).
+- **`user(id: ID!)`**: Mendapatkan pengguna berdasarkan ID.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pengguna).
+  - **Output:** `User` (Objek User).
+- **`currentUser`**: Mendapatkan informasi pengguna yang sedang login.
+  - **Argumen:** Tidak ada.
+  - **Output:** `User` (Objek User).
+
+#### Mutations
+
+- **`login(username: String!, password: String!)`**: Melakukan login pengguna.
+  - **Argumen:**
+    - `username`: `String!` (Wajib, nama pengguna).
+    - `password`: `String!` (Wajib, kata sandi).
+  - **Output:** `AuthResponse` (Objek AuthResponse dengan token dan data pengguna).
+- **`register(username: String!, email: String!, password: String!, fullName: String, role: String)`**: Mendaftarkan pengguna baru.
+  - **Argumen:**
+    - `username`: `String!` (Wajib, nama pengguna).
+    - `email`: `String!` (Wajib, email).
+    - `password`: `String!` (Wajib, kata sandi).
+    - `fullName`: `String` (Opsional, nama lengkap).
+    - `role`: `String` (Opsional, peran pengguna. Default: "user").
+  - **Output:** `AuthResponse` (Objek AuthResponse dengan token dan data pengguna).
+- **`updateUser(id: ID!, username: String, email: String, password: String, fullName: String, role: String, status: String)`**: Memperbarui informasi pengguna.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pengguna yang akan diperbarui).
+    - `username`: `String` (Opsional, nama pengguna baru).
+    - `email`: `String` (Opsional, email baru).
+    - `password`: `String` (Opsional, kata sandi baru).
+    - `fullName`: `String` (Opsional, nama lengkap baru).
+    - `role`: `String` (Opsional, peran baru).
+    - `status`: `String` (Opsional, status baru).
+  - **Output:** `User` (Objek User yang diperbarui).
+- **`deleteUser(id: ID!)`**: Menghapus pengguna.
+  - **Argumen:**
+    - `id`: `ID!` (Wajib, ID unik pengguna yang akan dihapus).
+  - **Output:** `Boolean` (True jika berhasil dihapus, false jika gagal).
+- **`verifyToken(token: String!)`**: Memverifikasi token autentikasi.
+  - **Argumen:**
+    - `token`: `String!` (Wajib, token JWT).
+  - **Output:** `VerifyResponse` (Objek VerifyResponse yang menunjukkan validitas token dan data pengguna).
