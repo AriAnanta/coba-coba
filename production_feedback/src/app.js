@@ -7,7 +7,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { sequelize } = require('./config/database');
-const feedbackRoutes = require('./routes/feedback.routes');
+const apiRoutes = require('./routes');
+const { initializeServices } = require('./services');
 const { findAvailablePort } = require('./utils/port-utils');
 require('dotenv').config();
 
@@ -71,7 +72,7 @@ app.get('/api', (req, res) => {
 });
 
 // Routes
-app.use('/api/feedback', feedbackRoutes);
+app.use('/api', apiRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -96,6 +97,10 @@ async function startServer() {
   try {
     // Initialize database first
     await initDatabase();
+    
+    // Initialize services (including Machine Queue consumer)
+    await initializeServices();
+    console.log('✅ Services initialized successfully');
     
     const preferredPort = parseInt(process.env.PORT) || 5005;
     const startRange = parseInt(process.env.PORT_RANGE_START) || preferredPort;

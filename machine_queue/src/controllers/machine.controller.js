@@ -11,7 +11,11 @@ const { Op } = require('sequelize');
  */
 exports.getAllMachines = async (req, res) => {
   try {
+    const { status } = req.query;
+    const whereCondition = status ? { status } : {};
+    
     const machines = await Machine.findAll({
+      where: whereCondition,
       order: [['name', 'ASC']]
     });
     
@@ -830,5 +834,24 @@ exports.getMaintenanceAlerts = async () => {
   } catch (error) {
     console.error('Error getting maintenance alerts:', error);
     return 0;
+  }
+};
+
+/**
+ * Mendapatkan mesin berdasarkan status
+ */
+exports.getMachinesByStatus = async (req, res) => {
+  try {
+    const { status } = req.params;
+    
+    const machines = await Machine.findAll({
+      where: { status },
+      order: [['name', 'ASC']]
+    });
+    
+    return res.status(200).json(machines);
+  } catch (error) {
+    console.error('Error mengambil mesin berdasarkan status:', error);
+    return res.status(500).json({ message: 'Kesalahan server internal' });
   }
 };

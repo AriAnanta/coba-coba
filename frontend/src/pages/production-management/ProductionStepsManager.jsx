@@ -41,7 +41,11 @@ import batchService from "../../api/batchService"; // Import the new service
 
 const ProductionStepsManager = ({ batchId, onStepsChange }) => {
   const [steps, setSteps] = useState([]);
+  const [machineTypes, setMachineTypes] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMachineTypes, setLoadingMachineTypes] = useState(false);
+  const [loadingMachines, setLoadingMachines] = useState(false);
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingStep, setEditingStep] = useState(null);
@@ -49,6 +53,7 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
     stepName: "",
     stepOrder: "",
     machineType: "",
+    name: "", // Changed from machineName to name
     notes: "",
   });
 
@@ -56,15 +61,30 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
     if (batchId) {
       fetchSteps();
     }
+    fetchMachineTypes();
+    fetchMachines();
   }, [batchId]);
 
   const fetchSteps = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await batchService.getBatchSteps(batchId); // Use service
-      setSteps(data);
-      if (onStepsChange) onStepsChange(data);
+      const data = await batchService.getBatchSteps(batchId);
+      console.log("Fetched steps data:", data);
+
+      // Enrich steps data with machine names
+      const enrichedSteps = data.map((step) => {
+        const machine = machines.find((m) => m.id === step.machine_id);
+        return {
+          ...step,
+          machineName: machine ? machine.name : null,
+        };
+      });
+
+      console.log("Enriched steps data:", enrichedSteps);
+
+      setSteps(enrichedSteps);
+      if (onStepsChange) onStepsChange(enrichedSteps);
     } catch (err) {
       console.error("Error fetching steps:", err);
       setError("Failed to fetch production steps");
@@ -73,18 +93,56 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
     }
   };
 
+  const fetchMachineTypes = async () => {
+    try {
+      setLoadingMachineTypes(true);
+      const types = await batchService.getMachineTypes();
+      setMachineTypes(types);
+    } catch (err) {
+      console.error("Error fetching machine types:", err);
+      // Keep empty array as fallback
+      setMachineTypes([]);
+    } finally {
+      setLoadingMachineTypes(false);
+    }
+  };
+
+  const fetchMachines = async () => {
+    try {
+      setLoadingMachines(true);
+      const machineData = await batchService.getOperationalMachines();
+      setMachines(machineData);
+    } catch (err) {
+      console.error("Error fetching machines:", err);
+      setMachines([]);
+    } finally {
+      setLoadingMachines(false);
+    }
+  };
+
   const handleCreateStep = async () => {
     try {
       setLoading(true);
-      setError(null); // Clear any previous errors
-      await batchService.createProductionStep(batchId, {
-        ...formData,
+      setError(null);
+
+      // Find the selected machine ID based on machine name
+      const selectedMachine = machines.find((m) => m.name === formData.name);
+
+      const stepData = {
+        stepName: formData.stepName,
         stepOrder: parseInt(formData.stepOrder),
-      });
+        machineType: formData.machineType,
+        machine_id: selectedMachine ? selectedMachine.id : null, // Send machine_id instead of name
+        notes: formData.notes,
+      };
+
+      console.log("Creating step with data:", stepData);
+
+      await batchService.createProductionStep(batchId, stepData);
 
       setOpenDialog(false);
       resetForm();
-      await fetchSteps(); // Make sure to wait for the fetch to complete
+      await fetchSteps();
     } catch (err) {
       console.error("Error creating step:", err);
       setError(
@@ -98,15 +156,30 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
   const handleUpdateStep = async () => {
     try {
       setLoading(true);
-      setError(null); // Clear any previous errors
-      await batchService.updateProductionStep(batchId, editingStep.id, {
-        ...formData,
+      setError(null);
+
+      // Find the selected machine ID based on machine name
+      const selectedMachine = machines.find((m) => m.name === formData.name);
+
+      const stepData = {
+        stepName: formData.stepName,
         stepOrder: parseInt(formData.stepOrder),
-      });
+        machineType: formData.machineType,
+        machine_id: selectedMachine ? selectedMachine.id : null, // Send machine_id instead of name
+        notes: formData.notes,
+      };
+
+      console.log("Updating step with data:", stepData);
+
+      await batchService.updateProductionStep(
+        batchId,
+        editingStep.id,
+        stepData
+      );
 
       setOpenDialog(false);
       resetForm();
-      await fetchSteps(); // Make sure to wait for the fetch to complete
+      await fetchSteps();
     } catch (err) {
       console.error("Error updating step:", err);
       setError(
@@ -165,10 +238,19 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
 
   const handleEditStep = (step) => {
     setEditingStep(step);
+
+    // Find machine name from machine_id
+    const machine = machines.find((m) => m.id === step.machine_id);
+    const machineName = machine ? machine.name : "";
+
+    console.log("Editing step:", step);
+    console.log("Found machine:", machine);
+
     setFormData({
       stepName: step.stepName,
       stepOrder: step.stepOrder.toString(),
       machineType: step.machineType || "",
+      name: machineName, // Use resolved machine name
       notes: step.notes || "",
     });
     setOpenDialog(true);
@@ -179,9 +261,16 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
       stepName: "",
       stepOrder: "",
       machineType: "",
+      name: "", // Changed from machineName to name
       notes: "",
     });
     setEditingStep(null);
+  };
+
+  // Filter machines based on selected type
+  const getFilteredMachines = () => {
+    if (!formData.machineType) return machines;
+    return machines.filter((machine) => machine.type === formData.machineType);
   };
 
   const getStatusChip = (status) => {
@@ -274,6 +363,7 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
                   <TableCell sx={{ fontWeight: 600 }}>Order</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Step Name</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Machine Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Machine Name</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
@@ -300,20 +390,14 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
                         {step.machineType || "N/A"}
                       </Typography>
                     </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {step.machineName || "N/A"}
+                      </Typography>
+                    </TableCell>
                     <TableCell>{getStatusChip(step.status)}</TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={1}>
-                        {step.status === "pending" && (
-                          <Tooltip title="Start Step">
-                            <IconButton
-                              size="small"
-                              color="success"
-                              onClick={() => handleStartStep(step.id)}
-                            >
-                              <StartIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
                         {step.status === "in_progress" && (
                           <Tooltip title="Complete Step">
                             <IconButton
@@ -419,25 +503,62 @@ const ProductionStepsManager = ({ batchId, onStepsChange }) => {
                   disabled={loading}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth disabled={loading}>
                   <InputLabel>Machine Type</InputLabel>
                   <Select
                     value={formData.machineType}
-                    onChange={(e) =>
-                      setFormData({ ...formData, machineType: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        machineType: e.target.value,
+                        name: "", // Reset machine name when type changes
+                      });
+                    }}
                     label="Machine Type"
                   >
                     <MenuItem value="">None</MenuItem>
-                    <MenuItem value="cutting">Cutting Machine</MenuItem>
-                    <MenuItem value="drilling">Drilling Machine</MenuItem>
-                    <MenuItem value="milling">Milling Machine</MenuItem>
-                    <MenuItem value="turning">Turning Machine</MenuItem>
-                    <MenuItem value="grinding">Grinding Machine</MenuItem>
-                    <MenuItem value="molding">Molding Machine</MenuItem>
-                    <MenuItem value="assembly">Assembly Station</MenuItem>
-                    <MenuItem value="inspection">Inspection Station</MenuItem>
+                    {loadingMachineTypes ? (
+                      <MenuItem disabled>
+                        <CircularProgress size={16} sx={{ mr: 1 }} />
+                        Loading machine types...
+                      </MenuItem>
+                    ) : (
+                      machineTypes.map((type) => (
+                        <MenuItem key={type} value={type}>
+                          {type}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl
+                  fullWidth
+                  disabled={loading || !formData.machineType}
+                >
+                  <InputLabel>Machine Name</InputLabel>
+                  <Select
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    label="Machine Name"
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {loadingMachines ? (
+                      <MenuItem disabled>
+                        <CircularProgress size={16} sx={{ mr: 1 }} />
+                        Loading machines...
+                      </MenuItem>
+                    ) : (
+                      getFilteredMachines().map((machine) => (
+                        <MenuItem key={machine.id} value={machine.name}>
+                          {machine.name}
+                        </MenuItem>
+                      ))
+                    )}
                   </Select>
                 </FormControl>
               </Grid>

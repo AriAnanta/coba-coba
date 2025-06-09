@@ -16,6 +16,7 @@ router.use(authMiddleware);
 router.get('/machines', machineController.getAllMachines);
 router.get('/machines/:id', machineController.getMachineById);
 router.get('/machines/type/:type', machineController.getMachinesByType);
+router.get('/machines/status/:status', machineController.getMachinesByStatus);
 router.get('/machine-types', machineController.getMachineTypes);
 router.get('/machines-for-product', machineController.getMachinesForProduct);
 router.get('/generate-machine-id', machineController.generateMachineId);

@@ -11,10 +11,6 @@
 const { Op, sequelize } = require('sequelize');
 const { 
   ProductionFeedback, 
-  ProductionStep, 
-  QualityCheck, 
-  FeedbackImage,
-  FeedbackComment,
   FeedbackNotification
 } = require('../models');
 const axios = require('axios');

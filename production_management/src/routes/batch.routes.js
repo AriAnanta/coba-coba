@@ -19,7 +19,6 @@ router.get("/:batchId/steps", batchController.getBatchSteps);
 router.post("/:batchId/steps", batchController.createProductionStep);
 router.put("/:batchId/steps/:stepId", batchController.updateProductionStep);
 router.delete("/:batchId/steps/:stepId", batchController.deleteProductionStep);
-router.put("/:batchId/steps/:stepId/start", batchController.startProduction);
 router.put(
   "/:batchId/steps/:stepId/complete",
   batchController.completeProductionStep

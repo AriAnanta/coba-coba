@@ -125,30 +125,6 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   ProductionFeedback.associate = (models) => {
-    // Relasi dengan ProductionStep (satu feedback memiliki banyak langkah produksi)
-    ProductionFeedback.hasMany(models.ProductionStep, {
-      foreignKey: 'feedbackId',
-      as: 'productionSteps'
-    });
-
-    // Relasi dengan QualityCheck (satu feedback memiliki banyak pemeriksaan kualitas)
-    ProductionFeedback.hasMany(models.QualityCheck, {
-      foreignKey: 'feedbackId',
-      as: 'qualityChecks'
-    });
-
-    // Relasi dengan FeedbackImage (satu feedback memiliki banyak gambar)
-    ProductionFeedback.hasMany(models.FeedbackImage, {
-      foreignKey: 'feedbackId',
-      as: 'images'
-    });
-
-    // Relasi dengan FeedbackComment (satu feedback memiliki banyak komentar)
-    ProductionFeedback.hasMany(models.FeedbackComment, {
-      foreignKey: 'feedbackId',
-      as: 'comments'
-    });
-
     // Relasi dengan FeedbackNotification (satu feedback memiliki banyak notifikasi)
     ProductionFeedback.hasMany(models.FeedbackNotification, {
       foreignKey: 'feedbackId',

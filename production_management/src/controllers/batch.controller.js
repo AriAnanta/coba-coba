@@ -130,6 +130,7 @@ exports.createBatch = async (req, res) => {
           scheduledStartTime: step.scheduledStartTime,
           scheduledEndTime: step.scheduledEndTime,
           status: "pending",
+          machine_id: step.machine_id,
         });
       }
     }
@@ -172,20 +173,22 @@ exports.createBatch = async (req, res) => {
     // Notify the Machine Queue Service
     try {
       if (steps && steps.length > 0) {
-        await axios.post(`${process.env.MACHINE_QUEUE_URL}/api/queue/add`, {
-          batchId: newBatch.id,
-          batchNumber: newBatch.batchNumber,
-          requestId: request.requestId,
-          productName: request.productName,
-          priority: request.priority,
-          steps: steps.map((s, i) => ({
-            stepId: i + 1,
-            stepName: s.stepName,
-            machineType: s.machineType,
-            scheduledStartTime: s.scheduledStartTime,
-            scheduledEndTime: s.scheduledEndTime,
-          })),
-        });
+        await axios.post(
+          `${process.env.MACHINE_QUEUE_URL}/api/queue/add-batch-steps`,
+          {
+            batchId: newBatch.id,
+            batchNumber: newBatch.batchNumber,
+            productName: request.productName,
+            priority: request.priority,
+            steps: steps.map((s) => ({
+              stepId: s.id,
+              stepName: s.stepName,
+              machineId: s.machine_id,
+              scheduledStartTime: s.scheduledStartTime,
+              scheduledEndTime: s.scheduledEndTime,
+            })),
+          }
+        );
       }
     } catch (error) {
       console.error("Failed to notify Machine Queue Service:", error.message);
@@ -299,6 +302,7 @@ exports.createProductionStep = async (req, res) => {
       scheduledStartTime,
       scheduledEndTime,
       notes,
+      machine_id,
     } = req.body;
 
     const newStep = await ProductionStep.create({
@@ -309,6 +313,7 @@ exports.createProductionStep = async (req, res) => {
       scheduledStartTime,
       scheduledEndTime,
       notes,
+      machine_id,
       status: "pending",
     });
 
@@ -458,187 +463,6 @@ exports.deleteProductionStep = async (req, res) => {
       .json({ message: "Production step deleted successfully" });
   } catch (error) {
     console.error("Error deleting production step:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-/**
- * Start a production step (and potentially update batch status)
- */
-exports.startProduction = async (req, res) => {
-  try {
-    const batchId = req.params.batchId;
-
-    const batch = await ProductionBatch.findByPk(batchId);
-    if (!batch) {
-      return res.status(404).json({ message: "Production batch not found" });
-    }
-
-    if (batch.status === "in_progress") {
-      return res
-        .status(400)
-        .json({ message: "Batch production is already in progress." });
-    }
-
-    await batch.update({
-      status: "in_progress",
-    });
-
-    // Optionally update the associated request status if this is the first batch to start production
-    const request = await ProductionRequest.findByPk(batch.request_id);
-    if (request && request.status === "planned") {
-      const otherBatches = await ProductionBatch.findAll({
-        where: {
-          request_id: batch.request_id,
-          status: { [Op.ne]: "pending" },
-        },
-      });
-
-      if (otherBatches.length === 0) {
-        // This is the first batch to start production for this request
-        await request.update({ status: "in_production" });
-
-        // Notify Production Feedback Service
-        try {
-          await axios.post(
-            `${process.env.FEEDBACK_SERVICE_URL}/api/feedback/status-update`,
-            {
-              requestId: request.requestId,
-              status: "in_production",
-              notes: `Production started for batch ${batch.batchNumber}`,
-            }
-          );
-        } catch (error) {
-          console.error(
-            "Failed to notify Feedback Service about production start:",
-            error.message
-          );
-        }
-      }
-    }
-
-    // Notify Machine Queue Service (if integrated for batch start)
-    try {
-      await axios.post(`${process.env.MACHINE_QUEUE_URL}/api/queue/start`, {
-        batchId: batch.id,
-        batchNumber: batch.batchNumber,
-        status: "in_progress",
-      });
-    } catch (error) {
-      console.error("Failed to notify Machine Queue Service:", error.message);
-    }
-
-    return res.status(200).json({
-      message: "Production started successfully",
-      batch: batch,
-    });
-  } catch (error) {
-    console.error("Error starting production:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-/**
- * Complete a production step
- */
-exports.completeProductionStep = async (req, res) => {
-  try {
-    const { batchId, stepId } = req.params;
-    const { notes } = req.body;
-
-    const step = await ProductionStep.findByPk(stepId);
-    if (!step) {
-      return res.status(404).json({ message: "Production step not found" });
-    }
-
-    if (step.batch_id != batchId) {
-      return res
-        .status(400)
-        .json({ message: "Step does not belong to this batch." });
-    }
-
-    if (step.status === "completed") {
-      return res
-        .status(400)
-        .json({ message: "Production step is already completed." });
-    }
-
-    await step.update({
-      status: "completed",
-      notes: notes || step.notes,
-    });
-
-    // Check if all steps in the batch are completed
-    const allBatchSteps = await ProductionStep.findAll({
-      where: { batch_id: batchId },
-    });
-
-    const allStepsCompleted = allBatchSteps.every(
-      (s) => s.status === "completed" || s.status === "cancelled"
-    );
-
-    if (allStepsCompleted) {
-      const batch = await ProductionBatch.findByPk(batchId);
-      if (batch) {
-        await batch.update({
-          status: "completed",
-        });
-
-        // Check if all batches for the request are completed
-        const allBatches = await ProductionBatch.findAll({
-          where: { request_id: batch.request_id },
-        });
-
-        const allBatchesCompleted = allBatches.every(
-          (b) => b.status === "completed" || b.status === "cancelled"
-        );
-
-        if (allBatchesCompleted) {
-          const request = await ProductionRequest.findByPk(batch.request_id);
-          if (request) {
-            await request.update({ status: "completed" });
-
-            // Notify Production Feedback Service for request completion
-            try {
-              await axios.post(
-                `${process.env.FEEDBACK_SERVICE_URL}/api/feedback/status-update`,
-                {
-                  requestId: request.requestId,
-                  status: "completed",
-                  notes: "All production completed for this request.",
-                }
-              );
-            } catch (error) {
-              console.error(
-                "Failed to notify Feedback Service about request completion:",
-                error.message
-              );
-            }
-          }
-        }
-      }
-    }
-
-    // Notify Machine Queue Service (if integrated for step completion)
-    try {
-      await axios.post(
-        `${process.env.MACHINE_QUEUE_URL}/api/queue/complete-step`,
-        {
-          batchId: batchId,
-          stepId: step.id,
-          status: "completed",
-        }
-      );
-    } catch (error) {
-      console.error("Failed to notify Machine Queue Service:", error.message);
-    }
-
-    return res.status(200).json({
-      message: "Production step completed successfully",
-      step: step,
-    });
-  } catch (error) {
-    console.error("Error completing production step:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -957,6 +781,111 @@ exports.deleteBatch = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting production batch:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Complete a production step
+ */
+exports.completeProductionStep = async (req, res) => {
+  try {
+    const { batchId, stepId } = req.params;
+    const { notes } = req.body;
+
+    const step = await ProductionStep.findByPk(stepId);
+    if (!step) {
+      return res.status(404).json({ message: "Production step not found" });
+    }
+
+    if (step.batch_id != batchId) {
+      return res
+        .status(400)
+        .json({ message: "Step does not belong to this batch." });
+    }
+
+    if (step.status === "completed") {
+      return res
+        .status(400)
+        .json({ message: "Production step is already completed." });
+    }
+
+    await step.update({
+      status: "completed",
+      notes: notes || step.notes,
+    });
+
+    // Check if all steps in the batch are completed
+    const allBatchSteps = await ProductionStep.findAll({
+      where: { batch_id: batchId },
+    });
+
+    const allStepsCompleted = allBatchSteps.every(
+      (s) => s.status === "completed" || s.status === "cancelled"
+    );
+
+    if (allStepsCompleted) {
+      const batch = await ProductionBatch.findByPk(batchId);
+      if (batch) {
+        await batch.update({
+          status: "completed",
+        });
+
+        // Check if all batches for the request are completed
+        const allBatches = await ProductionBatch.findAll({
+          where: { request_id: batch.request_id },
+        });
+
+        const allBatchesCompleted = allBatches.every(
+          (b) => b.status === "completed" || b.status === "cancelled"
+        );
+
+        if (allBatchesCompleted) {
+          const request = await ProductionRequest.findByPk(batch.request_id);
+          if (request) {
+            await request.update({ status: "completed" });
+
+            // Notify Production Feedback Service for request completion
+            try {
+              await axios.post(
+                `${process.env.FEEDBACK_SERVICE_URL}/api/feedback/status-update`,
+                {
+                  requestId: request.requestId,
+                  status: "completed",
+                  notes: "All production completed for this request.",
+                }
+              );
+            } catch (error) {
+              console.error(
+                "Failed to notify Feedback Service about request completion:",
+                error.message
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Notify Machine Queue Service (if integrated for step completion)
+    try {
+      await axios.post(
+        `${process.env.MACHINE_QUEUE_URL}/api/queue/complete-step`,
+        {
+          batchId: batchId,
+          stepId: step.id,
+          status: "completed",
+        }
+      );
+    } catch (error) {
+      console.error("Failed to notify Machine Queue Service:", error.message);
+    }
+
+    return res.status(200).json({
+      message: "Production step completed successfully",
+      step: step,
+    });
+  } catch (error) {
+    console.error("Error completing production step:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -170,6 +170,18 @@ const batchService = {
     const response = await axios.get("http://localhost:5003/api/machine-status-summary");
     return response.data;
   },
+
+  // Machine Types - Get types from operational machines
+  getMachineTypes: async () => {
+    const response = await axios.get("http://localhost:5003/api/machine-types");
+    return response.data;
+  },
+
+  // Get operational machines with name and type
+  getOperationalMachines: async () => {
+    const response = await axios.get("http://localhost:5003/api/machines?status=operational");
+    return response.data;
+  },
 };
 
 export default batchService;

@@ -45,6 +45,7 @@ import {
   AccessTime as QueueIcon,
 } from "@mui/icons-material";
 import { machineQueueAPI } from "../../services/api";
+import { machineQueueManagementApiService } from "../../services/api";
 
 const QueueManagement = () => {
   const navigate = useNavigate();
@@ -59,6 +60,7 @@ const QueueManagement = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedQueueId, setSelectedQueueId] = useState(null);
+  const [busyMachines, setBusyMachines] = useState(new Set());
 
   useEffect(() => {
     fetchQueueItems();
@@ -70,7 +72,18 @@ const QueueManagement = () => {
       setLoading(true);
       const response = await machineQueueAPI.getAllQueues();
       const data = response.data.data || response.data || [];
-      setQueueItems(Array.isArray(data) ? data : []);
+      const items = Array.isArray(data) ? data : [];
+
+      // Identifikasi mesin yang sedang sibuk
+      const currentlyBusyMachines = new Set();
+      items.forEach((item) => {
+        if (item.status === "in_progress" && item.machineId) {
+          currentlyBusyMachines.add(item.machineId);
+        }
+      });
+      setBusyMachines(currentlyBusyMachines);
+
+      setQueueItems(items);
       setError(null);
     } catch (error) {
       console.error("Error fetching queue items:", error);
@@ -122,7 +135,10 @@ const QueueManagement = () => {
 
   const handleStartClick = async () => {
     try {
-      await machineQueueAPI.updateQueueStatus(selectedQueueId, "in_progress");
+      await machineQueueManagementApiService.updateQueueStatus(
+        selectedQueueId,
+        "in_progress"
+      );
       fetchQueueItems();
     } catch (error) {
       console.error("Error starting queue item:", error);
@@ -133,7 +149,10 @@ const QueueManagement = () => {
 
   const handleCompleteClick = async () => {
     try {
-      await machineQueueAPI.updateQueueStatus(selectedQueueId, "completed");
+      await machineQueueManagementApiService.updateQueueStatus(
+        selectedQueueId,
+        "completed"
+      );
       fetchQueueItems();
     } catch (error) {
       console.error("Error completing queue item:", error);
@@ -144,7 +163,10 @@ const QueueManagement = () => {
 
   const handleCancelClick = async () => {
     try {
-      await machineQueueAPI.updateQueueStatus(selectedQueueId, "cancelled");
+      await machineQueueManagementApiService.updateQueueStatus(
+        selectedQueueId,
+        "cancelled"
+      );
       fetchQueueItems();
     } catch (error) {
       console.error("Error cancelling queue item:", error);
@@ -474,6 +496,9 @@ const QueueManagement = () => {
                         Batch
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, py: 2 }}>
+                        Step Name
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 2 }}>
                         Status
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, py: 2 }}>
@@ -536,6 +561,14 @@ const QueueManagement = () => {
                               sx={{ fontWeight: 500 }}
                             >
                               {queue.batchNumber}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 2 }}>
+                            <Typography
+                              variant="body1"
+                              sx={{ fontWeight: 500 }}
+                            >
+                              {queue.stepName || "N/A"}
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
@@ -632,7 +665,10 @@ const QueueManagement = () => {
           <EditIcon sx={{ mr: 1 }} /> Edit
         </MenuItem>
         {getSelectedQueue()?.status === "waiting" && (
-          <MenuItem onClick={handleStartClick}>
+          <MenuItem
+            onClick={handleStartClick}
+            disabled={busyMachines.has(getSelectedQueue()?.machineId)}
+          >
             <StartIcon sx={{ mr: 1 }} /> Start
           </MenuItem>
         )}

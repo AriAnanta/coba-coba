@@ -15,6 +15,7 @@ services:
       - production_feedback
     networks:
       - app-network
+    restart: unless-stopped
 
   # User Service
   user_service:
@@ -31,9 +32,11 @@ services:
       - DB_NAME=user_service_db
       - JWT_SECRET=your_jwt_secret_key
     depends_on:
-      - user_db
+      user_db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   # Production Management Service
   production_management:
@@ -55,9 +58,11 @@ services:
       - USER_SERVICE_URL=http://user_service:5006
       - SERVICE_URL=http://frontend:80
     depends_on:
-      - production_management_db
+      production_management_db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   # Production Planning Service
   production_planning:
@@ -73,9 +78,11 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=production_planning_db
     depends_on:
-      - production_planning_db
+      production_planning_db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   # Machine Queue Service
   machine_queue:
@@ -91,9 +98,11 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=machine_queue_db
     depends_on:
-      - machine_queue_db
+      machine_queue_db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   # Material Inventory Service
   material_inventory:
@@ -109,9 +118,11 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=material_inventory_db
     depends_on:
-      - material_inventory_db
+      material_inventory_db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   # Production Feedback Service
   production_feedback:
@@ -127,9 +138,11 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=production_feedback_db
     depends_on:
-      - production_feedback_db
+      production_feedback_db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   # Databases
   user_db:
@@ -142,6 +155,11 @@ services:
       - user_db_data:/var/lib/mysql
     networks:
       - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
   production_management_db:
     image: mysql:8.0
@@ -153,6 +171,11 @@ services:
       - production_management_db_data:/var/lib/mysql
     networks:
       - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
   production_planning_db:
     image: mysql:8.0
@@ -164,6 +187,11 @@ services:
       - production_planning_db_data:/var/lib/mysql
     networks:
       - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
   machine_queue_db:
     image: mysql:8.0
@@ -175,6 +203,11 @@ services:
       - machine_queue_db_data:/var/lib/mysql
     networks:
       - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
   material_inventory_db:
     image: mysql:8.0
@@ -186,6 +219,11 @@ services:
       - material_inventory_db_data:/var/lib/mysql
     networks:
       - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
   production_feedback_db:
     image: mysql:8.0
@@ -197,6 +235,11 @@ services:
       - production_feedback_db_data:/var/lib/mysql
     networks:
       - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
 networks:
   app-network:
