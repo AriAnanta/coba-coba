@@ -45,8 +45,13 @@ import ProductionPlans from "./pages/planning/ProductionPlans";
 import ProductionPlanDetail from "./pages/planning/ProductionPlanDetail";
 import ProductionPlanForm from "./pages/planning/ProductionPlanForm";
 
-// Production Feedback Pages
-import { FeedbackList, FeedbackDetail, FeedbackForm, ConsumerStatus } from "./pages/production-feedback";
+// // Production Feedback Pages
+// import {
+//   FeedbackList,
+//   FeedbackDetail,
+//   FeedbackForm,
+//   ConsumerStatus,
+// } from "./pages/production-feedback";
 
 // User Management Pages
 import UserManagement from "./pages/user/UserManagement";
@@ -78,7 +83,6 @@ function App() {
           >
             {/* Dashboard */}
             <Route path="/" element={<Dashboard />} />
-
             {/* Machine Queue */}
             <Route path="/machines" element={<MachineList />} />
             <Route path="/machines/add" element={<MachineForm />} />
@@ -87,7 +91,6 @@ function App() {
             <Route path="/queue" element={<QueueManagement />} />
             <Route path="/queue/add" element={<QueueForm />} />
             <Route path="/queue/:id/edit" element={<QueueForm />} />
-
             {/* Production Management Routes */}
             <Route
               path="/production-requests/add"
@@ -118,7 +121,6 @@ function App() {
               path="/production-batches/:id/edit"
               element={<ProductionBatchForm />}
             />
-
             {/* Material Inventory Routes */}
             <Route path="/materials" element={<MaterialList />} />
             <Route path="/materials/new" element={<CreateMaterial />} />
@@ -130,7 +132,6 @@ function App() {
             <Route path="/suppliers/:id" element={<SupplierDetail />} />
             <Route path="/suppliers/:id/edit" element={<EditSupplier />} />
             <Route path="/transactions" element={<TransactionHistory />} />
-
             {/* Production Planning Routes */}
             <Route path="/production-plans" element={<ProductionPlans />} />
             <Route
@@ -145,14 +146,15 @@ function App() {
               path="/production-plans/:id/edit"
               element={<ProductionPlanForm />}
             />
-
-            {/* Production Feedback Routes */}
+            {/* Production Feedback Routes
             <Route path="/feedback" element={<FeedbackList />} />
             <Route path="/feedback/new" element={<FeedbackForm />} />
             <Route path="/feedback/:id" element={<FeedbackDetail />} />
             <Route path="/feedback/:id/edit" element={<FeedbackForm />} />
-            <Route path="/feedback/consumer-status" element={<ConsumerStatus />} />
-
+            <Route
+              path="/feedback/consumer-status"
+              element={<ConsumerStatus />}
+            /> */}
             {/* User Management Routes */}
             <Route path="/users" element={<UserManagement />} />
             <Route path="/profile" element={<UserProfile />} />
