@@ -13,6 +13,7 @@ const { verifyToken } = require("../middleware/auth.middleware");
 
 // Routes untuk transaksi material
 router.get("/", transactionController.getAllTransactions);
+router.get("/material-transactions", transactionController.getAllMaterialTransactions);
 router.get("/report", transactionController.getTransactionReport);
 router.get(
   "/materials/:materialId",

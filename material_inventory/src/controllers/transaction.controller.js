@@ -469,3 +469,143 @@ exports.getTransactionReport = async (req, res) => {
     });
   }
 };
+
+/**
+ * Mendapatkan semua transaksi material dari material_transactions table
+ */
+exports.getAllMaterialTransactions = async (req, res) => {
+  try {
+    // Filter berdasarkan parameter query
+    const { 
+      type,
+      materialId,
+      supplierId,
+      startDate,
+      endDate,
+      referenceNumber,
+      page = 1,
+      limit = 50
+    } = req.query;
+    
+    // Membangun kondisi WHERE
+    const where = {};
+    
+    if (type) where.type = type;
+    if (materialId) where.materialId = materialId;
+    if (supplierId) where.supplierId = supplierId;
+    if (referenceNumber) {
+      where.referenceNumber = { [Op.like]: `%${referenceNumber}%` };
+    }
+    
+    // Filter berdasarkan rentang tanggal
+    if (startDate || endDate) {
+      where.transactionDate = {};
+      
+      if (startDate) {
+        where.transactionDate[Op.gte] = new Date(startDate);
+      }
+      
+      if (endDate) {
+        // Tambahkan 1 hari ke endDate untuk mencakup seluruh hari
+        const endDateTime = new Date(endDate);
+        endDateTime.setDate(endDateTime.getDate() + 1);
+        where.transactionDate[Op.lt] = endDateTime;
+      }
+    }
+    
+    // Hitung offset untuk pagination
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Dapatkan data transaksi dengan material dan supplier
+    const { count, rows: transactions } = await MaterialTransaction.findAndCountAll({
+      where,
+      include: [
+        {
+          model: Material,
+          as: 'material',
+          attributes: ['id', 'materialId', 'name', 'category', 'type', 'unit'],
+          required: true
+        },
+        {
+          model: Supplier,
+          as: 'supplier',
+          attributes: ['id', 'supplierId', 'name', 'contactPerson'],
+          required: false
+        }
+      ],
+      order: [['transactionDate', 'DESC']],
+      limit: parseInt(limit),
+      offset: offset
+    });
+    
+    // Format data untuk frontend
+    const formattedTransactions = transactions.map(transaction => ({
+      id: transaction.id,
+      transactionId: transaction.transactionId,
+      date: transaction.transactionDate,
+      materialId: transaction.material.materialId,
+      materialName: transaction.material.name,
+      materialCategory: transaction.material.category,
+      type: transaction.type,
+      quantity: transaction.quantity,
+      unit: transaction.unit,
+      unitPrice: transaction.unitPrice,
+      totalPrice: transaction.totalPrice,
+      reference: transaction.referenceNumber,
+      batchNumber: transaction.batchNumber,
+      supplier: transaction.supplier ? transaction.supplier.name : null,
+      supplierContact: transaction.supplier ? transaction.supplier.contactPerson : null,
+      receivedBy: transaction.receivedBy,
+      createdBy: transaction.createdBy,
+      qualityStatus: transaction.qualityStatus,
+      deliveryDate: transaction.deliveryDate,
+      description: transaction.notes,
+      createdAt: transaction.createdAt
+    }));
+    
+    // Hitung statistik
+    const totalTransactions = count;
+    const totalPages = Math.ceil(totalTransactions / parseInt(limit));
+    
+    // Fix column names to match database schema (use snake_case)
+    const summary = await MaterialTransaction.findAll({
+      where,
+      attributes: [
+        'type',
+        [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count'],
+        [db.sequelize.fn('SUM', db.sequelize.col('quantity')), 'totalQuantity'],
+        [db.sequelize.fn('SUM', db.sequelize.col('total_price')), 'totalValue']
+      ],
+      group: ['type'],
+      raw: true
+    });
+    
+    return res.status(200).json({
+      success: true,
+      data: formattedTransactions,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalTransactions,
+        limit: parseInt(limit),
+        hasNext: parseInt(page) < totalPages,
+        hasPrev: parseInt(page) > 1
+      },
+      summary: summary.reduce((acc, item) => {
+        acc[item.type] = {
+          count: parseInt(item.count),
+          totalQuantity: parseFloat(item.totalQuantity) || 0,
+          totalValue: parseFloat(item.totalValue) || 0
+        };
+        return acc;
+      }, {})
+    });
+  } catch (error) {
+    console.error('Error pada getAllMaterialTransactions:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Kesalahan server internal',
+      error: error.message
+    });
+  }
+};

@@ -123,6 +123,53 @@ const batchService = {
     );
     return response.data;
   },
+
+  // Machine Queue Service - Updated to use correct port 5003
+  generateMachineId: async () => {
+    const response = await axios.get("http://localhost:5003/api/generate-machine-id");
+    return response.data;
+  },
+
+  getAllMachines: async () => {
+    const response = await axios.get("http://localhost:5003/api/machines");
+    return response.data;
+  },
+
+  getMachineById: async (id) => {
+    const response = await axios.get(`http://localhost:5003/api/machines/${id}`);
+    return response.data;
+  },
+
+  createMachine: async (machineData) => {
+    const response = await axios.post("http://localhost:5003/api/machines", machineData);
+    return response.data;
+  },
+
+  updateMachine: async (id, machineData) => {
+    const response = await axios.put(`http://localhost:5003/api/machines/${id}`, machineData);
+    return response.data;
+  },
+
+  deleteMachine: async (id) => {
+    const response = await axios.delete(`http://localhost:5003/api/machines/${id}`);
+    return response.data;
+  },
+
+  // Machine Status Management
+  updateMachineStatus: async (id, statusData) => {
+    const response = await axios.put(`http://localhost:5003/api/machines/${id}/status`, statusData);
+    return response.data;
+  },
+
+  getMaintenanceSchedule: async (days = 7) => {
+    const response = await axios.get(`http://localhost:5003/api/maintenance-schedule?days=${days}`);
+    return response.data;
+  },
+
+  getMachineStatusSummary: async () => {
+    const response = await axios.get("http://localhost:5003/api/machine-status-summary");
+    return response.data;
+  },
 };
 
 export default batchService;

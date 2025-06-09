@@ -28,6 +28,9 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  FormControl,
+  InputLabel,
+  Select,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -38,8 +41,12 @@ import {
   Visibility as ViewIcon,
   Clear as ClearIcon,
   Settings as MachineIcon,
+  Build as MaintenanceIcon,
+  Warning as WarningIcon,
+  PlayArrow as OperationalIcon,
+  Stop as InactiveIcon,
 } from "@mui/icons-material";
-import { machineQueueAPI } from "../../services/api";
+import batchService from "../../api/batchService"; // Changed from machineQueueAPI to batchService
 
 const MachineList = () => {
   const navigate = useNavigate();
@@ -51,17 +58,20 @@ const MachineList = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedMachineId, setSelectedMachineId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [maintenanceAlerts, setMaintenanceAlerts] = useState(0);
 
   useEffect(() => {
     fetchMachines();
+    fetchMaintenanceAlerts();
   }, []);
 
   const fetchMachines = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await machineQueueAPI.getAllMachines();
-      setMachines(response.data || []);
+      const response = await batchService.getAllMachines(); // Changed to use batchService
+      setMachines(response.data || response || []); // Handle different response structures
     } catch (err) {
       setError("Failed to fetch machines.");
       console.error("Error fetching machines:", err);
@@ -70,15 +80,39 @@ const MachineList = () => {
     }
   };
 
+  const fetchMaintenanceAlerts = async () => {
+    try {
+      const response = await batchService.getMaintenanceSchedule(7);
+      if (response.success) {
+        setMaintenanceAlerts(response.data.overdue + response.data.upcoming);
+      }
+    } catch (error) {
+      console.error("Error fetching maintenance alerts:", error);
+    }
+  };
+
   const handleDeleteMachine = async (id) => {
     if (window.confirm("Are you sure you want to delete this machine?")) {
       try {
-        await machineQueueAPI.deleteMachine(id);
-        fetchMachines();
+        await batchService.deleteMachine(id); // Changed to use batchService
+        fetchMachines(); // Refresh the list after deletion
       } catch (err) {
         setError("Failed to delete machine.");
         console.error("Error deleting machine:", err);
       }
+    }
+  };
+
+  const handleStatusChange = async (machineId, newStatus, reason = "") => {
+    try {
+      await batchService.updateMachineStatus(machineId, {
+        status: newStatus,
+        reason,
+      });
+      fetchMachines(); // Refresh the list
+    } catch (error) {
+      setError("Failed to update machine status");
+      console.error("Error updating status:", error);
     }
   };
 
@@ -131,12 +165,16 @@ const MachineList = () => {
     setPage(0);
   };
 
-  const filteredMachines = machines.filter(
-    (machine) =>
+  const filteredMachines = machines.filter((machine) => {
+    const matchesSearch =
       machine.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       machine.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      machine.location?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      machine.location?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || machine.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const paginatedMachines = filteredMachines.slice(
     page * rowsPerPage,
@@ -375,7 +413,7 @@ const MachineList = () => {
             width: "100%",
           }}
         >
-          {/* Search Section */}
+          {/* Search and Filter Section */}
           <Box
             sx={{
               p: 3,
@@ -384,31 +422,56 @@ const MachineList = () => {
               borderColor: "grey.200",
             }}
           >
-            <TextField
-              fullWidth
-              label="Search Machines"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchTerm("")}>
-                      <ClearIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  bgcolor: "white",
-                },
-              }}
-            />
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={8}>
+                <TextField
+                  fullWidth
+                  label="Search Machines"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchTerm && (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setSearchTerm("")}>
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      bgcolor: "white",
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Status Filter</InputLabel>
+                  <Select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    label="Status Filter"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        bgcolor: "white",
+                      },
+                    }}
+                  >
+                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="operational">Operational</MenuItem>
+                    <MenuItem value="maintenance">Maintenance</MenuItem>
+                    <MenuItem value="breakdown">Breakdown</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
           </Box>
 
           {/* Table Section */}
@@ -525,6 +588,56 @@ const MachineList = () => {
                                   <ViewIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
+
+                              {/* Quick Status Actions */}
+                              {machine.status === "operational" && (
+                                <Tooltip title="Schedule Maintenance">
+                                  <IconButton
+                                    size="small"
+                                    color="warning"
+                                    onClick={() =>
+                                      handleStatusChange(
+                                        machine.id,
+                                        "maintenance",
+                                        "Scheduled maintenance"
+                                      )
+                                    }
+                                    sx={{
+                                      "&:hover": {
+                                        bgcolor: "warning.light",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <MaintenanceIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+
+                              {machine.status === "maintenance" && (
+                                <Tooltip title="Set Operational">
+                                  <IconButton
+                                    size="small"
+                                    color="success"
+                                    onClick={() =>
+                                      handleStatusChange(
+                                        machine.id,
+                                        "operational",
+                                        "Maintenance completed"
+                                      )
+                                    }
+                                    sx={{
+                                      "&:hover": {
+                                        bgcolor: "success.light",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <OperationalIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+
                               <Tooltip title="Edit">
                                 <IconButton
                                   size="small"

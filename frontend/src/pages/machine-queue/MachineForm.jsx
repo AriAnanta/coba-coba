@@ -19,13 +19,18 @@ import {
   Fade,
   Grow,
   Stack,
+  Divider,
+  Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
-  Settings as MachineIcon, // Changed from Precision to Settings
+  Settings as MachineIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
-import { machineQueueAPI } from "../../services/api";
+import batchService from "../../api/batchService";
 
 const MachineForm = () => {
   const navigate = useNavigate();
@@ -34,6 +39,7 @@ const MachineForm = () => {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingId, setGeneratingId] = useState(false);
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
@@ -43,44 +49,68 @@ const MachineForm = () => {
     status: "operational",
     location: "",
     manufacturer: "",
-    model: "",
-    serialNumber: "",
+    modelNumber: "",
     capacity: "",
     capacityUnit: "",
     installationDate: "",
-    maintenanceSchedule: "",
-    specifications: "",
+    lastMaintenance: "",
+    nextMaintenance: "",
+    hoursPerDay: "8.00",
     notes: "",
   });
 
   useEffect(() => {
     if (isEdit) {
       loadMachine();
+    } else {
+      generateMachineId();
     }
   }, [id, isEdit]);
+
+  const generateMachineId = async () => {
+    try {
+      setGeneratingId(true);
+      const response = await batchService.generateMachineId();
+      if (response.success) {
+        setFormData((prev) => ({
+          ...prev,
+          machineId: response.machineId,
+        }));
+      }
+    } catch (error) {
+      console.error("Error generating machine ID:", error);
+      setError("Failed to generate machine ID");
+    } finally {
+      setGeneratingId(false);
+    }
+  };
 
   const loadMachine = async () => {
     try {
       setLoading(true);
-      const response = await machineQueueAPI.getMachineById(id);
-      const machine = response.data.data || response.data;
+      const response = await batchService.getMachineById(id);
+      const machine = response.data || response;
 
       setFormData({
-        machineId: machine.machineId || "",
+        machineId: machine.machine_id || "",
         name: machine.name || "",
         type: machine.type || "",
         status: machine.status || "operational",
         location: machine.location || "",
         manufacturer: machine.manufacturer || "",
-        model: machine.model || "",
-        serialNumber: machine.serialNumber || "",
+        modelNumber: machine.model_number || "",
         capacity: machine.capacity || "",
-        capacityUnit: machine.capacityUnit || "",
-        installationDate: machine.installationDate
-          ? new Date(machine.installationDate).toISOString().slice(0, 10)
+        capacityUnit: machine.capacity_unit || "",
+        installationDate: machine.installation_date
+          ? new Date(machine.installation_date).toISOString().slice(0, 10)
           : "",
-        maintenanceSchedule: machine.maintenanceSchedule || "",
-        specifications: machine.specifications || "",
+        lastMaintenance: machine.last_maintenance
+          ? new Date(machine.last_maintenance).toISOString().slice(0, 10)
+          : "",
+        nextMaintenance: machine.next_maintenance
+          ? new Date(machine.next_maintenance).toISOString().slice(0, 10)
+          : "",
+        hoursPerDay: machine.hours_per_day || "8.00",
         notes: machine.notes || "",
       });
     } catch (error) {
@@ -108,15 +138,16 @@ const MachineForm = () => {
       const submitData = {
         ...formData,
         capacity: formData.capacity ? parseFloat(formData.capacity) : null,
-        installationDate: formData.installationDate
-          ? new Date(formData.installationDate).toISOString()
-          : null,
+        hoursPerDay: formData.hoursPerDay ? parseFloat(formData.hoursPerDay) : 8.0,
+        installationDate: formData.installationDate || null,
+        lastMaintenance: formData.lastMaintenance || null,
+        nextMaintenance: formData.nextMaintenance || null,
       };
 
       if (isEdit) {
-        await machineQueueAPI.updateMachine(id, submitData);
+        await batchService.updateMachine(id, submitData);
       } else {
-        await machineQueueAPI.createMachine(submitData);
+        await batchService.createMachine(submitData);
       }
 
       navigate("/machines");
@@ -125,6 +156,21 @@ const MachineForm = () => {
       console.error("Error saving machine:", error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "operational":
+        return "success";
+      case "maintenance":
+        return "warning";
+      case "breakdown":
+        return "error";
+      case "inactive":
+        return "default";
+      default:
+        return "default";
     }
   };
 
@@ -164,34 +210,50 @@ const MachineForm = () => {
           }}
         >
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <Avatar
-                sx={{
-                  bgcolor: "rgba(255,255,255,0.2)",
-                  width: { xs: 56, sm: 64 },
-                  height: { xs: 56, sm: 64 },
-                  mr: { xs: 2, sm: 3 },
-                }}
-              >
-                <MachineIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
-              </Avatar>
-              <Box>
-                <Typography
-                  variant="h4"
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Avatar
                   sx={{
-                    fontWeight: 700,
-                    mb: 1,
-                    fontSize: { xs: "1.75rem", sm: "2.125rem" },
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    width: { xs: 56, sm: 64 },
+                    height: { xs: 56, sm: 64 },
+                    mr: { xs: 2, sm: 3 },
                   }}
                 >
-                  {isEdit ? "Edit Machine" : "Add New Machine"}
-                </Typography>
-                <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                  {isEdit
-                    ? "Modify machine details"
-                    : "Register a new production machine"}
-                </Typography>
+                  <MachineIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+                </Avatar>
+                <Box>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 1,
+                      fontSize: { xs: "1.75rem", sm: "2.125rem" },
+                    }}
+                  >
+                    {isEdit ? "Edit Machine" : "Add New Machine"}
+                  </Typography>
+                  <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                    {isEdit
+                      ? "Modify machine details and specifications"
+                      : "Register a new production machine to the system"}
+                  </Typography>
+                </Box>
               </Box>
+              {formData.status && (
+                <Chip
+                  label={formData.status.toUpperCase()}
+                  color={getStatusColor(formData.status)}
+                  size="medium"
+                  sx={{ color: "white", fontWeight: "bold" }}
+                />
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -234,32 +296,53 @@ const MachineForm = () => {
           }}
         >
           <Box sx={{ p: 4 }}>
+            {/* Basic Information */}
             <Typography
               variant="h6"
               sx={{
                 mb: 3,
                 fontWeight: 600,
                 color: "text.primary",
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              Machine Information
+              Basic Information
             </Typography>
 
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Machine ID"
-                  name="machineId"
-                  value={formData.machineId}
-                  onChange={handleChange}
-                  required
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                    },
-                  }}
-                />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="Machine ID"
+                    name="machineId"
+                    value={formData.machineId}
+                    onChange={handleChange}
+                    required
+                    disabled={isEdit}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
+                    }}
+                  />
+                  {!isEdit && (
+                    <Tooltip title="Generate new Machine ID">
+                      <IconButton
+                        onClick={generateMachineId}
+                        disabled={generatingId}
+                        sx={{ ml: 1 }}
+                      >
+                        {generatingId ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          <RefreshIcon />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -281,11 +364,12 @@ const MachineForm = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Type"
+                  label="Type/Category"
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
                   required
+                  placeholder="e.g., CNC Machine, Lathe, Press"
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -323,6 +407,7 @@ const MachineForm = () => {
                   name="location"
                   value={formData.location}
                   onChange={handleChange}
+                  placeholder="e.g., Shop Floor A, Building 2"
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -331,6 +416,40 @@ const MachineForm = () => {
                 />
               </Grid>
 
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Hours Per Day"
+                  name="hoursPerDay"
+                  type="number"
+                  value={formData.hoursPerDay}
+                  onChange={handleChange}
+                  inputProps={{ min: 0, max: 24, step: 0.25 }}
+                  required
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                    },
+                  }}
+                />
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Technical Specifications */}
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 3,
+                fontWeight: 600,
+                color: "text.primary",
+              }}
+            >
+              Technical Specifications
+            </Typography>
+
+            <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -349,24 +468,9 @@ const MachineForm = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Model"
-                  name="model"
-                  value={formData.model}
-                  onChange={handleChange}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                    },
-                  }}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Serial Number"
-                  name="serialNumber"
-                  value={formData.serialNumber}
+                  label="Model Number"
+                  name="modelNumber"
+                  value={formData.modelNumber}
                   onChange={handleChange}
                   sx={{
                     "& .MuiOutlinedInput-root": {
@@ -384,6 +488,7 @@ const MachineForm = () => {
                   type="number"
                   value={formData.capacity}
                   onChange={handleChange}
+                  inputProps={{ min: 0, step: 0.01 }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -399,7 +504,7 @@ const MachineForm = () => {
                   name="capacityUnit"
                   value={formData.capacityUnit}
                   onChange={handleChange}
-                  placeholder="e.g., pcs/hour, kg/hour"
+                  placeholder="e.g., pcs/hour, kg/hour, units/day"
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -407,8 +512,24 @@ const MachineForm = () => {
                   }}
                 />
               </Grid>
+            </Grid>
 
-              <Grid item xs={12} md={6}>
+            <Divider sx={{ my: 4 }} />
+
+            {/* Maintenance & Installation */}
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 3,
+                fontWeight: 600,
+                color: "text.primary",
+              }}
+            >
+              Installation & Maintenance
+            </Typography>
+
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
                   label="Installation Date"
@@ -425,14 +546,15 @@ const MachineForm = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
-                  label="Maintenance Schedule"
-                  name="maintenanceSchedule"
-                  value={formData.maintenanceSchedule}
+                  label="Last Maintenance"
+                  name="lastMaintenance"
+                  type="date"
+                  value={formData.lastMaintenance}
                   onChange={handleChange}
-                  placeholder="e.g., Weekly, Monthly"
+                  InputLabelProps={{ shrink: true }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -441,15 +563,15 @@ const MachineForm = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
-                  label="Specifications"
-                  name="specifications"
-                  value={formData.specifications}
+                  label="Next Maintenance"
+                  name="nextMaintenance"
+                  type="date"
+                  value={formData.nextMaintenance}
                   onChange={handleChange}
-                  multiline
-                  rows={3}
+                  InputLabelProps={{ shrink: true }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -466,7 +588,8 @@ const MachineForm = () => {
                   value={formData.notes}
                   onChange={handleChange}
                   multiline
-                  rows={3}
+                  rows={4}
+                  placeholder="Additional notes, specifications, or important information about this machine..."
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -490,7 +613,7 @@ const MachineForm = () => {
                       )
                     }
                     disabled={saving}
-                    sx={{ px: 4 }}
+                    sx={{ px: 4, py: 1.5 }}
                   >
                     {saving
                       ? "Saving..."
@@ -502,7 +625,7 @@ const MachineForm = () => {
                     variant="outlined"
                     size="large"
                     onClick={() => navigate("/machines")}
-                    sx={{ px: 4 }}
+                    sx={{ px: 4, py: 1.5 }}
                   >
                     Cancel
                   </Button>
