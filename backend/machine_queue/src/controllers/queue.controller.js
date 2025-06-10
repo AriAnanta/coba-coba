@@ -819,3 +819,43 @@ exports.updateQueueStatus = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get queue items by batch ID
+ */
+exports.getQueuesByBatchId = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const { status } = req.query;
+
+    // Build filter
+    const where = { batch_id: batchId };
+    if (status) where.status = status;
+
+    const queues = await MachineQueue.findAll({
+      where,
+      include: [
+        {
+          model: Machine,
+          as: "machine",
+          required: false,
+        },
+      ],
+      order: [
+        ["updated_at", "DESC"],
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: queues,
+    });
+  } catch (error) {
+    console.error("Error fetching queue items by batch ID:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};

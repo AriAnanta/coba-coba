@@ -99,6 +99,29 @@ const feedbackResolvers = {
         // Generate feedback ID
         const feedbackId = `FB-${Date.now()}`;
         
+        // Jika batchId ada tapi productName tidak ada, coba ambil dari machine_queue service
+        if (input.batchId && !input.productName) {
+          try {
+            const machineQueueServiceUrl = process.env.MACHINE_QUEUE_URL || 'http://localhost:5003';
+            const response = await axios.get(`${machineQueueServiceUrl}/api/queues/batch/${input.batchId}?status=completed`);
+            
+            if (response.data && response.data.success && response.data.data.length > 0) {
+              // Ambil data dari queue yang completed
+              const completedQueue = response.data.data[0];
+              input.productName = completedQueue.product_name || 'Unknown Product';
+              console.log(`Retrieved product name from machine queue: ${input.productName}`);
+            }
+          } catch (error) {
+            console.error('Error fetching data from machine queue service:', error);
+            // Lanjutkan meskipun gagal mendapatkan data dari service lain
+          }
+        }
+        
+        // Validasi productName harus ada
+        if (!input.productName) {
+          throw new Error('Product name is required');
+        }
+        
         // Buat feedback baru
         const feedback = await ProductionFeedback.create({
           ...input,
@@ -107,19 +130,20 @@ const feedbackResolvers = {
           updatedBy: context.user?.username || 'system'
         });
         
-        // Dapatkan data machine queue dari service machine_queue
+        // Dapatkan data tambahan dari machine queue jika diperlukan
         try {
-          const machineQueueServiceUrl = process.env.MACHINE_QUEUE_SERVICE_URL || 'http://localhost:5003';
-          const response = await axios.get(`${machineQueueServiceUrl}/api/queues/batch/${input.batchId}`);
+          const machineQueueServiceUrl = process.env.MACHINE_QUEUE_URL || 'http://localhost:5003';
+          const response = await axios.get(`${machineQueueServiceUrl}/api/queues/batch/${input.batchId}?status=completed`);
           
-          if (response.data && response.data.length > 0) {
+          if (response.data && response.data.success && response.data.data.length > 0) {
             // Update data tambahan dari machine queue jika diperlukan
+            const completedQueue = response.data.data[0];
             await feedback.update({
-              productionPlanId: response.data[0].productionPlanId || null
+              productionPlanId: completedQueue.production_plan_id || null
             });
           }
         } catch (error) {
-          console.error('Error fetching machine queue data:', error);
+          console.error('Error fetching additional data from machine queue service:', error);
           // Lanjutkan meskipun gagal mendapatkan data dari service lain
         }
         

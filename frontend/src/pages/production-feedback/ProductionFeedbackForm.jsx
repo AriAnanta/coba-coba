@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -8,10 +8,15 @@ import {
   Grid,
   Alert,
   CircularProgress,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@apollo/client';
+import { useMutation, useLazyQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
+import axios from 'axios';
 import { PageHeader } from '../../components/common';
 
 // Mutation untuk membuat production feedback
@@ -38,6 +43,8 @@ const ProductionFeedbackForm = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [completedBatches, setCompletedBatches] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Mutation untuk membuat production feedback
   const [createFeedback, { loading: createLoading }] = useMutation(CREATE_PRODUCTION_FEEDBACK, {
@@ -52,6 +59,59 @@ const ProductionFeedbackForm = () => {
     },
   });
 
+  // Mengambil data batch yang sudah selesai dari machine_queue service
+  useEffect(() => {
+    const fetchCompletedBatches = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:5003/api/queues?status=completed');
+        console.log('API Response:', response.data); // Tambahkan log untuk debugging
+        
+        if (response.data && response.data.success) {
+          // Mengelompokkan data berdasarkan batch_id untuk menghindari duplikasi
+          const batchMap = {};
+          
+          // Pastikan response.data.data adalah array sebelum menggunakan forEach
+          if (Array.isArray(response.data.data)) {
+            response.data.data.forEach(queue => {
+              // Periksa properti yang tersedia di objek queue
+              console.log('Queue item:', queue);
+              
+              // Gunakan properti yang benar (batchId atau batch_id)
+              const batchIdValue = queue.batchId || queue.batch_id;
+              const productNameValue = queue.productName || queue.product_name;
+              
+              if (batchIdValue && !batchMap[batchIdValue]) {
+                batchMap[batchIdValue] = {
+                  batchId: batchIdValue,
+                  productName: productNameValue,
+                };
+              }
+            });
+            
+            // Konversi map ke array
+            const uniqueBatches = Object.values(batchMap);
+            console.log('Unique Batches:', uniqueBatches); // Tambahkan log untuk debugging
+            setCompletedBatches(uniqueBatches);
+          } else {
+            console.error('Response data is not an array:', response.data.data);
+            setError('Invalid data format received from server');
+          }
+        } else {
+          console.error('API response error:', response.data);
+          setError('Failed to load completed batches. Invalid response format.');
+        }
+      } catch (error) {
+        console.error('Error fetching completed batches:', error);
+        setError('Failed to load completed batches. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompletedBatches();
+  }, []);
+
   // Handle perubahan pada form
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,6 +121,25 @@ const ProductionFeedbackForm = () => {
     });
   };
 
+  // Handle perubahan batch
+  const handleBatchChange = (e) => {
+    const selectedBatchId = e.target.value;
+    const selectedBatch = completedBatches.find(batch => batch.batchId === selectedBatchId);
+    
+    if (selectedBatch) {
+      setFormData({
+        ...formData,
+        batchId: selectedBatch.batchId,
+        productName: selectedBatch.productName,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        batchId: selectedBatchId,
+        productName: '',
+      });
+    }
+  };
 
   // Handle submit form
   const handleSubmit = (e) => {
@@ -74,7 +153,7 @@ const ProductionFeedbackForm = () => {
 
     // Buat input untuk mutation
     const input = {
-      batchId: formData.batchId,
+      batchId: String(formData.batchId), // Konversi ke string untuk memastikan tipe data sesuai
       productName: formData.productName,
       status: 'pending',
       plannedQuantity: parseInt(formData.plannedQuantity),
@@ -112,15 +191,31 @@ const ProductionFeedbackForm = () => {
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Batch ID"
-                name="batchId"
-                value={formData.batchId}
-                onChange={handleChange}
-                disabled={createLoading}
-                required
-              />
+              <FormControl fullWidth>
+                <InputLabel id="batch-select-label">Batch ID</InputLabel>
+                <Select
+                  labelId="batch-select-label"
+                  id="batch-select"
+                  name="batchId"
+                  value={formData.batchId}
+                  onChange={handleBatchChange}
+                  disabled={createLoading || loading}
+                  label="Batch ID"
+                  required
+                >
+                  {loading ? (
+                    <MenuItem disabled>Loading batches...</MenuItem>
+                  ) : completedBatches.length > 0 ? (
+                    completedBatches.map((batch) => (
+                      <MenuItem key={batch.batchId} value={batch.batchId}>
+                        {batch.batchId} - {batch.productName}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>No completed batches found</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
             </Grid>
             
             <Grid item xs={12} md={6}>

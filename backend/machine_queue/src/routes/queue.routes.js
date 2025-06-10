@@ -15,6 +15,7 @@ const router = express.Router();
 
 // Queue management routes
 router.get("/queues", queueController.getAllQueues);
+router.get("/queues/batch/:batchId", queueController.getQueuesByBatchId); // New route for getting queues by batch ID
 router.get("/queues/:id", queueController.getQueueById);
 router.post("/queues", queueController.addToQueue); // Changed from /queues/add
 router.put("/queues/:id", queueController.updateQueue);
