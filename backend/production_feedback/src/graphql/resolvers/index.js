@@ -1,22 +1,22 @@
 /**
  * Index file untuk GraphQL resolvers
- *
+ * 
  * Menggabungkan semua resolver untuk digunakan oleh Apollo Server
  */
-const feedbackResolvers = require("./feedback.resolver");
-// const stepResolvers = require('./step.resolver');
-// const qualityResolvers = require('./quality.resolver');
-// const imageResolvers = require('./image.resolver');
-// const commentResolvers = require('./comment.resolver');
-const notificationResolvers = require("./notification.resolver");
-const { GraphQLScalarType } = require("graphql");
-const { Kind } = require("graphql/language");
+const feedbackResolvers = require('./feedback.resolver');
+const stepResolvers = require('./step.resolver');
+const qualityResolvers = require('./quality.resolver');
+const imageResolvers = require('./image.resolver');
+const commentResolvers = require('./comment.resolver');
+const notificationResolvers = require('./notification.resolver');
+const { GraphQLScalarType } = require('graphql');
+const { Kind } = require('graphql/language');
 
 // Resolver untuk tipe skalar khusus
 const scalarResolvers = {
   Date: new GraphQLScalarType({
-    name: "Date",
-    description: "Tipe data Date kustom",
+    name: 'Date',
+    description: 'Tipe data Date kustom',
     parseValue(value) {
       // Input dari variabel di query
       return new Date(value);
@@ -31,17 +31,17 @@ const scalarResolvers = {
         return new Date(ast.value);
       }
       return null;
-    },
+    }
   }),
-
+  
   JSON: new GraphQLScalarType({
-    name: "JSON",
-    description: "Tipe data JSON kustom",
+    name: 'JSON',
+    description: 'Tipe data JSON kustom',
     parseValue(value) {
-      return typeof value === "string" ? JSON.parse(value) : value;
+      return typeof value === 'string' ? JSON.parse(value) : value;
     },
     serialize(value) {
-      return typeof value === "string" ? value : JSON.stringify(value);
+      return typeof value === 'string' ? value : JSON.stringify(value);
     },
     parseLiteral(ast) {
       if (ast.kind === Kind.STRING) {
@@ -52,35 +52,35 @@ const scalarResolvers = {
         }
       }
       return null;
-    },
-  }),
+    }
+  })
 };
 
 // Gabungkan semua resolver
 const resolvers = {
   Query: {
     ...feedbackResolvers.Query,
-    // ...stepResolvers.Query,
-    // ...qualityResolvers.Query,
-    // ...imageResolvers.Query,
-    // ...commentResolvers.Query,
-    ...notificationResolvers.Query,
+    ...stepResolvers.Query,
+    ...qualityResolvers.Query,
+    ...imageResolvers.Query,
+    ...commentResolvers.Query,
+    ...notificationResolvers.Query
   },
   Mutation: {
     ...feedbackResolvers.Mutation,
-    // ...stepResolvers.Mutation,
-    // ...qualityResolvers.Mutation,
-    // ...imageResolvers.Mutation,
-    // ...commentResolvers.Mutation,
-    ...notificationResolvers.Mutation,
+    ...stepResolvers.Mutation,
+    ...qualityResolvers.Mutation,
+    ...imageResolvers.Mutation,
+    ...commentResolvers.Mutation,
+    ...notificationResolvers.Mutation
   },
   ProductionFeedback: feedbackResolvers.ProductionFeedback,
-  // ProductionStep: stepResolvers.ProductionStep,
-  // QualityCheck: qualityResolvers.QualityCheck,
-  // FeedbackImage: imageResolvers.FeedbackImage,
-  // FeedbackComment: commentResolvers.FeedbackComment,
+  ProductionStep: stepResolvers.ProductionStep,
+  QualityCheck: qualityResolvers.QualityCheck,
+  FeedbackImage: imageResolvers.FeedbackImage,
+  FeedbackComment: commentResolvers.FeedbackComment,
   FeedbackNotification: notificationResolvers.FeedbackNotification,
-  ...scalarResolvers,
+  ...scalarResolvers
 };
 
 module.exports = resolvers;

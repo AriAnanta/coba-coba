@@ -1,194 +1,371 @@
 /**
  * Resolver Feedback untuk GraphQL API
- *
+ * 
  * Implementasi resolver untuk ProductionFeedback
  */
-const {
+const { 
   ProductionFeedback,
+  ProductionStep,
+  QualityCheck,
+  FeedbackImage,
+  FeedbackComment,
   FeedbackNotification,
-  Sequelize,
-} = require("../../models");
+  Sequelize
+} = require('../../models');
 const { Op } = Sequelize;
 
 // Resolver untuk tipe ProductionFeedback
 const feedbackResolvers = {
   ProductionFeedback: {
-    notifications: async (parent) => {
-      return await FeedbackNotification.findAll({
+    // Resolver untuk relasi
+    steps: async (parent) => {
+      return await ProductionStep.findAll({
         where: { feedbackId: parent.id },
+        order: [['stepOrder', 'ASC']]
       });
     },
+    qualityChecks: async (parent) => {
+      return await QualityCheck.findAll({
+        where: { feedbackId: parent.id }
+      });
+    },
+    images: async (parent) => {
+      return await FeedbackImage.findAll({
+        where: { feedbackId: parent.id }
+      });
+    },
+    comments: async (parent) => {
+      return await FeedbackComment.findAll({
+        where: { 
+          feedbackId: parent.id,
+          isDeleted: false
+        }
+      });
+    },
+    notifications: async (parent) => {
+      return await FeedbackNotification.findAll({
+        where: { feedbackId: parent.id }
+      });
+    }
   },
-
+  
   // Resolver untuk Query
   Query: {
     // Mendapatkan feedback berdasarkan ID
-    feedback: async (_, { id }) => {
+    getFeedbackById: async (_, { id }) => {
       return await ProductionFeedback.findByPk(id);
     },
-
+    
+    // Mendapatkan feedback berdasarkan feedbackId
+    getFeedbackByFeedbackId: async (_, { feedbackId }) => {
+      return await ProductionFeedback.findOne({
+        where: { feedbackId }
+      });
+    },
+    
+    // Mendapatkan feedback berdasarkan batchId
+    getFeedbackByBatchId: async (_, { batchId }) => {
+      return await ProductionFeedback.findOne({
+        where: { batchId }
+      });
+    },
+    
+    // Mendapatkan feedback berdasarkan orderId
+    getFeedbackByOrderId: async (_, { orderId }) => {
+      return await ProductionFeedback.findOne({
+        where: { orderId }
+      });
+    },
+    
     // Mendapatkan semua feedback dengan paginasi dan filter
-    feedbacks: async (_, { filter, pagination }) => {
+    getAllFeedback: async (_, { pagination, filters }) => {
       const page = pagination?.page || 1;
       const limit = pagination?.limit || 10;
       const offset = (page - 1) * limit;
-
+      
       // Siapkan kondisi where berdasarkan filter
       const whereCondition = {};
-
-      if (filter) {
-        if (filter.status) whereCondition.status = filter.status;
-        if (filter.batchId)
-          whereCondition.batchId = { [Op.like]: `%${filter.batchId}%` };
-        if (filter.productName)
-          whereCondition.productName = { [Op.like]: `%${filter.productName}%` };
-
-        if (filter.startDate && filter.endDate) {
+      
+      if (filters) {
+        if (filters.status) whereCondition.status = filters.status;
+        if (filters.batchId) whereCondition.batchId = { [Op.like]: `%${filters.batchId}%` };
+        if (filters.orderId) whereCondition.orderId = { [Op.like]: `%${filters.orderId}%` };
+        if (filters.productId) whereCondition.productId = { [Op.like]: `%${filters.productId}%` };
+        if (filters.productName) whereCondition.productName = { [Op.like]: `%${filters.productName}%` };
+        
+        if (filters.startDate && filters.endDate) {
           whereCondition.createdAt = {
-            [Op.between]: [
-              new Date(filter.startDate),
-              new Date(filter.endDate),
-            ],
+            [Op.between]: [new Date(filters.startDate), new Date(filters.endDate)]
           };
-        } else if (filter.startDate) {
-          whereCondition.createdAt = { [Op.gte]: new Date(filter.startDate) };
-        } else if (filter.endDate) {
-          whereCondition.createdAt = { [Op.lte]: new Date(filter.endDate) };
+        } else if (filters.startDate) {
+          whereCondition.createdAt = { [Op.gte]: new Date(filters.startDate) };
+        } else if (filters.endDate) {
+          whereCondition.createdAt = { [Op.lte]: new Date(filters.endDate) };
         }
       }
-
+      
       // Query dengan paginasi
       const { count, rows } = await ProductionFeedback.findAndCountAll({
         where: whereCondition,
         limit,
         offset,
-        order: [["createdAt", "DESC"]],
+        order: [['createdAt', 'DESC']]
       });
-
+      
       return {
-        items: rows,
-        totalCount: count,
-        pageInfo: {
-          hasNextPage: page * limit < count,
-          hasPreviousPage: page > 1,
-        },
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        items: rows
       };
     },
-
-    // Mendapatkan ringkasan feedback untuk dashboard
-    feedbackSummary: async () => {
-      const total = await ProductionFeedback.count();
-      const statusCounts = await ProductionFeedback.findAll({
-        attributes: [
-          "status",
-          [Sequelize.fn("COUNT", Sequelize.col("status")), "count"],
-        ],
-        group: ["status"],
+    
+    // Mendapatkan ringkasan produksi
+    getProductionSummary: async (_, { timeframe }) => {
+      // Default timeframe adalah 30 hari terakhir
+      const endDate = new Date();
+      let startDate;
+      
+      switch (timeframe) {
+        case 'day':
+          startDate = new Date(endDate);
+          startDate.setDate(endDate.getDate() - 1);
+          break;
+        case 'week':
+          startDate = new Date(endDate);
+          startDate.setDate(endDate.getDate() - 7);
+          break;
+        case 'month':
+          startDate = new Date(endDate);
+          startDate.setMonth(endDate.getMonth() - 1);
+          break;
+        case 'quarter':
+          startDate = new Date(endDate);
+          startDate.setMonth(endDate.getMonth() - 3);
+          break;
+        case 'year':
+          startDate = new Date(endDate);
+          startDate.setFullYear(endDate.getFullYear() - 1);
+          break;
+        default:
+          startDate = new Date(endDate);
+          startDate.setMonth(endDate.getMonth() - 1);
+          timeframe = 'month';
+      }
+      
+      // Ambil data dalam rentang waktu
+      const feedbacks = await ProductionFeedback.findAll({
+        where: {
+          createdAt: {
+            [Op.between]: [startDate, endDate]
+          }
+        }
       });
-
-      const completedCount =
-        statusCounts.find((s) => s.status === "completed")?.dataValues.count ||
-        0;
-      const totalActual = await ProductionFeedback.sum("quantityProduced", {
-        where: { status: "completed" },
-      });
-      const totalDefect = await ProductionFeedback.sum("quantityRejected", {
-        where: { status: "completed" },
-      });
-
-      const defectRate = totalActual > 0 ? totalDefect / totalActual : 0;
-      const onTimeRate = 0; // Placeholder, perlu logika untuk ini
-
-      const status = statusCounts.map((s) => ({
-        status: s.status,
-        count: s.dataValues.count,
-        color:
-          s.status === "completed"
-            ? "success"
-            : s.status === "rejected"
-            ? "error"
-            : "warning",
-      }));
-
+      
+      // Hitung statistik
+      const totalBatches = feedbacks.length;
+      const completedBatches = feedbacks.filter(f => f.status === 'completed').length;
+      const inProductionBatches = feedbacks.filter(f => f.status === 'in_production').length;
+      const onHoldBatches = feedbacks.filter(f => f.status === 'on_hold').length;
+      const cancelledBatches = feedbacks.filter(f => f.status === 'cancelled' || f.status === 'rejected').length;
+      
+      const totalPlannedQuantity = feedbacks.reduce((sum, f) => sum + (f.plannedQuantity || 0), 0);
+      const totalActualQuantity = feedbacks.reduce((sum, f) => sum + (f.actualQuantity || 0), 0);
+      const totalDefectQuantity = feedbacks.reduce((sum, f) => sum + (f.defectQuantity || 0), 0);
+      
+      // Hitung rata-rata skor kualitas dari data yang ada
+      const feedbacksWithQualityScore = feedbacks.filter(f => f.qualityScore !== null);
+      const sumQualityScore = feedbacksWithQualityScore.reduce((sum, f) => sum + (f.qualityScore || 0), 0);
+      const averageQualityScore = feedbacksWithQualityScore.length > 0 
+        ? sumQualityScore / feedbacksWithQualityScore.length 
+        : 0;
+      
       return {
-        total,
-        status,
-        defectRate,
-        onTimeRate,
+        totalBatches,
+        completedBatches,
+        inProductionBatches,
+        onHoldBatches,
+        cancelledBatches,
+        totalPlannedQuantity,
+        totalActualQuantity,
+        totalDefectQuantity,
+        averageQualityScore,
+        timeframe
       };
-    },
+    }
   },
-
+  
   // Resolver untuk Mutation
   Mutation: {
     // Membuat feedback baru
-    createFeedback: async (_, { input }) => {
-      const newFeedback = await ProductionFeedback.create({
-        feedbackId: input.feedbackId || `FB-${Date.now()}`,
-        batchId: input.batchId,
-        productName: input.productName,
-        productionPlanId: input.productionPlanId,
-        status: input.status,
-        plannedQuantity: input.plannedQuantity,
-        quantityProduced: input.actualQuantity,
-        quantityRejected: input.defectQuantity,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        notes: input.notes,
+    createFeedback: async (_, { input }, context) => {
+      // Cek apakah user diautentikasi
+      if (!context.user) {
+        throw new Error('Autentikasi diperlukan');
+      }
+      
+      // Buat ID unik untuk feedback
+      const generateUniqueId = (prefix) => {
+        const timestamp = new Date().getTime().toString().slice(-8);
+        const random = Math.random().toString(36).substring(2, 2 + 8);
+        return `${prefix}-${timestamp}-${random}`;
+      };
+      
+      // Buat feedback baru
+      const feedback = await ProductionFeedback.create({
+        ...input,
+        feedbackId: generateUniqueId('FB'),
+        isMarketplaceUpdated: false,
+        createdBy: context.user.username,
+        updatedBy: context.user.username
       });
-      return newFeedback;
+      
+      return feedback;
     },
-
-    // Memperbarui feedback
-    updateFeedback: async (_, { id, input }) => {
+    
+    // Mengupdate feedback
+    updateFeedback: async (_, { id, input }, context) => {
+      // Cek apakah user diautentikasi
+      if (!context.user) {
+        throw new Error('Autentikasi diperlukan');
+      }
+      
+      // Cek apakah feedback ada
       const feedback = await ProductionFeedback.findByPk(id);
       if (!feedback) {
-        throw new Error("Feedback not found");
+        throw new Error('Feedback tidak ditemukan');
       }
+      
+      // Update feedback
       await feedback.update({
         ...input,
-        quantityProduced: input.actualQuantity,
-        quantityRejected: input.defectQuantity,
+        updatedBy: context.user.username
       });
-      return feedback;
+      
+      return await ProductionFeedback.findByPk(id);
     },
-
-    // Memperbarui status feedback
-    updateFeedbackStatus: async (_, { id, status }) => {
+    
+    // Mengupdate status feedback
+    updateFeedbackStatus: async (_, { id, status }, context) => {
+      // Cek apakah user diautentikasi
+      if (!context.user) {
+        throw new Error('Autentikasi diperlukan');
+      }
+      
+      // Cek apakah feedback ada
       const feedback = await ProductionFeedback.findByPk(id);
       if (!feedback) {
-        throw new Error("Feedback not found");
+        throw new Error('Feedback tidak ditemukan');
       }
-      await feedback.update({ status });
-      return feedback;
-    },
-
-    // Memperbarui kuantitas feedback
-    updateFeedbackQuantities: async (
-      _,
-      { id, actualQuantity, defectQuantity }
-    ) => {
-      const feedback = await ProductionFeedback.findByPk(id);
-      if (!feedback) {
-        throw new Error("Feedback not found");
-      }
+      
+      // Update status
       await feedback.update({
-        quantityProduced: actualQuantity,
-        quantityRejected: defectQuantity,
+        status,
+        updatedBy: context.user.username
       });
-      return feedback;
+      
+      return await ProductionFeedback.findByPk(id);
     },
-
-    // Menghapus feedback
-    deleteFeedback: async (_, { id }) => {
+    
+    // Mengupdate kuantitas feedback
+    updateFeedbackQuantities: async (_, { id, actualQuantity, defectQuantity }, context) => {
+      // Cek apakah user diautentikasi
+      if (!context.user) {
+        throw new Error('Autentikasi diperlukan');
+      }
+      
+      // Cek apakah feedback ada
       const feedback = await ProductionFeedback.findByPk(id);
       if (!feedback) {
-        return { success: false, message: "Feedback not found" };
+        throw new Error('Feedback tidak ditemukan');
       }
-      await feedback.destroy();
-      return { success: true, message: "Feedback deleted successfully" };
+      
+      // Siapkan data update
+      const updateData = {
+        updatedBy: context.user.username
+      };
+      
+      if (actualQuantity !== undefined) {
+        updateData.actualQuantity = actualQuantity;
+      }
+      
+      if (defectQuantity !== undefined) {
+        updateData.defectQuantity = defectQuantity;
+      }
+      
+      // Update feedback
+      await feedback.update(updateData);
+      
+      return await ProductionFeedback.findByPk(id);
     },
-  },
+    
+    // Menghapus feedback
+    deleteFeedback: async (_, { id }, context) => {
+      // Cek apakah user diautentikasi
+      if (!context.user) {
+        throw new Error('Autentikasi diperlukan');
+      }
+      
+      // Cek apakah feedback ada
+      const feedback = await ProductionFeedback.findByPk(id);
+      if (!feedback) {
+        throw new Error('Feedback tidak ditemukan');
+      }
+      
+      // Soft delete
+      await feedback.update({
+        isDeleted: true,
+        updatedBy: context.user.username
+      });
+      
+      return {
+        success: true,
+        message: 'Feedback berhasil dihapus',
+        id
+      };
+    },
+    
+    // Mengirim update ke marketplace
+    sendMarketplaceUpdate: async (_, { feedbackId }, context) => {
+      // Cek apakah user diautentikasi
+      if (!context.user) {
+        throw new Error('Autentikasi diperlukan');
+      }
+      
+      // Cek apakah feedback ada
+      const feedback = await ProductionFeedback.findOne({
+        where: { feedbackId }
+      });
+      
+      if (!feedback) {
+        throw new Error('Feedback tidak ditemukan');
+      }
+      
+      try {
+        // TODO: Implementasi pengiriman data ke marketplace API
+        // Di sini hanya contoh update status
+        
+        await feedback.update({
+          isMarketplaceUpdated: true,
+          marketplaceUpdateDate: new Date(),
+          updatedBy: context.user.username
+        });
+        
+        return {
+          success: true,
+          message: 'Update marketplace berhasil',
+          id: feedback.id
+        };
+      } catch (error) {
+        console.error('Error update marketplace:', error);
+        return {
+          success: false,
+          message: `Gagal update marketplace: ${error.message}`,
+          id: feedback.id
+        };
+      }
+    }
+  }
 };
 
 module.exports = feedbackResolvers;
