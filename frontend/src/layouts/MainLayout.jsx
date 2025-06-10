@@ -183,7 +183,7 @@ const MainLayout = () => {
             {
               text: "Feedback List",
               icon: <FeedbackIcon />,
-              path: "/production-feedback",
+              path: "/feedback",
             },
             {
               text: "Consumer Status",

@@ -13,11 +13,26 @@ import {
   Chip,
   IconButton,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Grid,
+  Card,
+  CardContent,
+  Divider,
 } from '@mui/material';
-import { Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Visibility as VisibilityIcon, 
+  Edit as EditIcon, 
+  Delete as DeleteIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@apollo/client';
-import { GET_FEEDBACKS } from '../../graphql/productionFeedback';
+import { useQuery, useMutation } from '@apollo/client';
+import { GET_FEEDBACKS, DELETE_FEEDBACK, GET_FEEDBACK } from '../../graphql/productionFeedback';
 import { PageHeader, SearchBar } from '../../components/common';
 
 // Fungsi untuk mendapatkan warna chip berdasarkan status
@@ -42,12 +57,40 @@ const FeedbackList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   
+  // State untuk dialog konfirmasi delete
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [feedbackToDelete, setFeedbackToDelete] = useState(null);
+  
+  // State untuk dialog detail
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedFeedbackId, setSelectedFeedbackId] = useState(null);
+  
   // Query untuk mendapatkan daftar production feedback
-  const { loading, error, data } = useQuery(GET_FEEDBACKS, {
+  const { loading, error, data, refetch } = useQuery(GET_FEEDBACKS, {
     variables: {
       filters: {},
       pagination: { page: 1, limit: 10 },
     },
+  });
+  
+  // Query untuk mendapatkan detail feedback
+  const { data: feedbackDetail, loading: detailLoading } = useQuery(GET_FEEDBACK, {
+    variables: { id: selectedFeedbackId },
+    skip: !selectedFeedbackId,
+  });
+
+  // Mutation untuk menghapus feedback
+  const [deleteFeedback, { loading: deleteLoading }] = useMutation(DELETE_FEEDBACK, {
+    onCompleted: () => {
+      // Tutup dialog dan refresh data
+      setDeleteDialogOpen(false);
+      setFeedbackToDelete(null);
+      refetch();
+    },
+    onError: (error) => {
+      console.error('Error deleting feedback:', error);
+      // Tampilkan pesan error jika diperlukan
+    }
   });
 
   // Handle search
@@ -62,7 +105,32 @@ const FeedbackList = () => {
 
   // Handle view feedback detail
   const handleViewFeedback = (id) => {
-    navigate(`/feedback/${id}`);
+    setSelectedFeedbackId(id);
+    setDetailDialogOpen(true);
+  };
+  
+  // Handle edit feedback
+  const handleEditFeedback = (id) => {
+    navigate(`/feedback/edit/${id}`);
+  };
+  
+  // Handle delete feedback
+  const handleDeleteClick = (feedback) => {
+    setFeedbackToDelete(feedback);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Konfirmasi delete feedback
+  const confirmDelete = () => {
+    if (feedbackToDelete) {
+      deleteFeedback({ variables: { id: feedbackToDelete.id } });
+    }
+  };
+  
+  // Tutup dialog detail
+  const handleCloseDetailDialog = () => {
+    setDetailDialogOpen(false);
+    setSelectedFeedbackId(null);
   };
 
   return (
@@ -96,7 +164,6 @@ const FeedbackList = () => {
                 <TableCell>Status</TableCell>
                 <TableCell>Planned Qty</TableCell>
                 <TableCell>Actual Qty</TableCell>
-                {/* <TableCell>Created At</TableCell> */}
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -134,17 +201,31 @@ const FeedbackList = () => {
                     </TableCell>
                     <TableCell>{feedback.plannedQuantity}</TableCell>
                     <TableCell>{feedback.actualQuantity || '-'}</TableCell>
-                    {/* <TableCell>
-                      {new Date(feedback.createdAt).toLocaleDateString()}
-                    </TableCell> */}
                     <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleViewFeedback(feedback.id)}
-                        title="View Details"
-                      >
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
+                      <Box sx={{ display: 'flex' }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleViewFeedback(feedback.id)}
+                          title="View Details"
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditFeedback(feedback.id)}
+                          title="Edit Feedback"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(feedback)}
+                          title="Delete Feedback"
+                          color="error"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))
@@ -153,6 +234,228 @@ const FeedbackList = () => {
           </Table>
         </TableContainer>
       </Paper>
+      
+      {/* Dialog konfirmasi delete */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Konfirmasi Hapus
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Apakah Anda yakin ingin menghapus feedback {feedbackToDelete?.feedbackId} untuk batch {feedbackToDelete?.batchId}?
+            Tindakan ini tidak dapat dibatalkan.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteLoading}>
+            Batal
+          </Button>
+          <Button onClick={confirmDelete} color="error" autoFocus disabled={deleteLoading}>
+            {deleteLoading ? <CircularProgress size={24} /> : 'Hapus'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Dialog detail feedback */}
+      <Dialog
+        open={detailDialogOpen}
+        onClose={handleCloseDetailDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Detail Production Feedback
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseDetailDialog}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {detailLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : feedbackDetail?.getFeedbackById ? (
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Informasi Umum</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    
+                    <Grid container spacing={1}>
+                      <Grid item xs={4}>
+                        <Typography variant="body2" color="text.secondary">Feedback ID</Typography>
+                      </Grid>
+                      <Grid item xs={8}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.feedbackId}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={4}>
+                        <Typography variant="body2" color="text.secondary">Batch ID</Typography>
+                      </Grid>
+                      <Grid item xs={8}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.batchId}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={4}>
+                        <Typography variant="body2" color="text.secondary">Produk</Typography>
+                      </Grid>
+                      <Grid item xs={8}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.productName}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={4}>
+                        <Typography variant="body2" color="text.secondary">Status</Typography>
+                      </Grid>
+                      <Grid item xs={8}>
+                        <Chip
+                          label={feedbackDetail.getFeedbackById.status}
+                          color={getStatusColor(feedbackDetail.getFeedbackById.status)}
+                          size="small"
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Informasi Produksi</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    
+                    <Grid container spacing={1}>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">Planned Quantity</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.plannedQuantity}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">Actual Quantity</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.actualQuantity || '-'}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">Defect Quantity</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.defectQuantity || '-'}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">Start Date</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">
+                          {feedbackDetail.getFeedbackById.startDate 
+                            ? new Date(feedbackDetail.getFeedbackById.startDate).toLocaleDateString() 
+                            : '-'}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">End Date</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">
+                          {feedbackDetail.getFeedbackById.endDate 
+                            ? new Date(feedbackDetail.getFeedbackById.endDate).toLocaleDateString() 
+                            : '-'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Catatan</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    <Typography variant="body2">
+                      {feedbackDetail.getFeedbackById.notes || 'Tidak ada catatan'}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Informasi Tambahan</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    
+                    <Grid container spacing={1}>
+                      <Grid item xs={3}>
+                        <Typography variant="body2" color="text.secondary">Dibuat Oleh</Typography>
+                      </Grid>
+                      <Grid item xs={3}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.createdBy || '-'}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={3}>
+                        <Typography variant="body2" color="text.secondary">Diperbarui Oleh</Typography>
+                      </Grid>
+                      <Grid item xs={3}>
+                        <Typography variant="body2">{feedbackDetail.getFeedbackById.updatedBy || '-'}</Typography>
+                      </Grid>
+                      
+                      <Grid item xs={3}>
+                        <Typography variant="body2" color="text.secondary">Tanggal Dibuat</Typography>
+                      </Grid>
+                      <Grid item xs={3}>
+                        <Typography variant="body2">
+                          {new Date(feedbackDetail.getFeedbackById.createdAt).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={3}>
+                        <Typography variant="body2" color="text.secondary">Tanggal Diperbarui</Typography>
+                      </Grid>
+                      <Grid item xs={3}>
+                        <Typography variant="body2">
+                          {new Date(feedbackDetail.getFeedbackById.updatedAt).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          ) : (
+            <Typography>Data tidak ditemukan</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetailDialog}>Tutup</Button>
+          {feedbackDetail?.getFeedbackById && (
+            <Button 
+              color="primary" 
+              onClick={() => {
+                handleCloseDetailDialog();
+                handleEditFeedback(feedbackDetail.getFeedbackById.id);
+              }}
+            >
+              Edit
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
