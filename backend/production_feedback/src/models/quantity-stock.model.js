@@ -10,48 +10,25 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
-    feedbackId: {
-      type: DataTypes.STRING(50),
+    productName: {
+      type: DataTypes.STRING(100),
       allowNull: false,
-      field: 'feedback_id',
-      references: {
-        model: 'production_feedbacks',
-        key: 'feedback_id'
-      }
+      field: 'product_name'
     },
-    materialId: {
-      type: DataTypes.STRING(50),
+    quantity: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      field: 'material_id'
+      defaultValue: 0
     },
-    materialName: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-      field: 'material_name'
-    },
-    usedQuantity: {
-      type: DataTypes.FLOAT,
-      allowNull: false,
-      defaultValue: 0,
-      field: 'used_quantity'
-    },
-    unit: {
-      type: DataTypes.STRING(20),
-      allowNull: false
-    },
-    notes: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    createdBy: {
-      type: DataTypes.STRING(50),
+    reorderPoint: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      field: 'created_by'
+      field: 'reorder_point'
     },
-    updatedBy: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-      field: 'updated_by'
+    status: {
+      type: DataTypes.ENUM('received', 'cancelled', 'in_transit', 'returned'),
+      allowNull: false,
+      defaultValue: 'received'
     }
   }, {
     tableName: 'quantity_stock',
@@ -59,21 +36,18 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     indexes: [
       {
-        name: 'idx_feedback_id',
-        fields: ['feedback_id']
-      },
-      {
-        name: 'idx_material_id',
-        fields: ['material_id']
+        name: 'idx_product_name',
+        fields: ['product_name']
       }
     ]
   });
 
+
   // Definisi asosiasi
   QuantityStock.associate = (models) => {
     QuantityStock.belongsTo(models.ProductionFeedback, {
-      foreignKey: 'feedback_id',
-      targetKey: 'feedbackId',
+      foreignKey: 'product_name',
+      targetKey: 'productName',
       as: 'feedback'
     });
   };

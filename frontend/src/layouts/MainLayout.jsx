@@ -186,6 +186,11 @@ const MainLayout = () => {
               path: "/feedback",
             },
             {
+              text: "Quantity Stock",
+              icon: <InventoryIcon />,
+              path: "/feedback/quantity-stock",
+            },
+            {
               text: "Consumer Status",
               icon: <SettingsIcon />,
               path: "/feedback/consumer-status",

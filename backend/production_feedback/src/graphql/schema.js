@@ -18,6 +18,14 @@ const typeDefs = gql`
     rejected
   }
 
+  # Tipe untuk status quantity stock
+  enum QuantityStockStatus {
+    received
+    cancelled
+    in_transit
+    returned
+  }
+
   # Tipe untuk jenis notifikasi
   enum NotificationType {
     status_change
@@ -57,17 +65,13 @@ const typeDefs = gql`
   # Tipe untuk Quantity Stock
   type QuantityStock {
     id: ID!
-    feedbackId: String!
-    materialId: String!
-    materialName: String!
-    usedQuantity: Float!
-    unit: String!
-    notes: String
-    createdBy: String
-    updatedBy: String
+    productName: String!
+    quantity: Int!
+    reorderPoint: Int
+    status: QuantityStockStatus!
     createdAt: String!
     updatedAt: String!
-    # Relasi dengan ProductionFeedback
+    # Relasi dengan ProductionFeedback berdasarkan productName
     feedback: ProductionFeedback
   }
 
@@ -96,15 +100,11 @@ const typeDefs = gql`
 
   # Input untuk Quantity Stock
   input QuantityStockInput {
-    feedbackId: String!
-    materialId: String!
-    materialName: String!
-    usedQuantity: Float!
-    unit: String!
-    notes: String
+    productName: String!
+    quantity: Int!
+    reorderPoint: Int
+    status: QuantityStockStatus
   }
-
-
 
   # Tipe skalar kustom
   scalar Date
@@ -125,6 +125,12 @@ const typeDefs = gql`
     endDate: String
   }
 
+  # Tipe untuk input filter quantity stock
+  input QuantityStockFilterInput {
+    status: QuantityStockStatus
+    productName: String
+  }
+
   # Tipe untuk informasi halaman
   type PageInfo {
     hasNextPage: Boolean!
@@ -134,6 +140,13 @@ const typeDefs = gql`
   # Tipe untuk respons paginasi feedback
   type FeedbackPaginationResponse {
     items: [ProductionFeedback]!
+    totalCount: Int!
+    pageInfo: PageInfo!
+  }
+
+  # Tipe untuk respons paginasi quantity stock
+  type QuantityStockPaginationResponse {
+    items: [QuantityStock]!
     totalCount: Int!
     pageInfo: PageInfo!
   }
@@ -148,8 +161,10 @@ const typeDefs = gql`
 
     # Quantity Stock queries
     getQuantityStockById(id: ID!): QuantityStock
+    getAllQuantityStocks(pagination: PaginationInput, filters: QuantityStockFilterInput): QuantityStockPaginationResponse
     getQuantityStocksByFeedbackId(feedbackId: String!): [QuantityStock]
-    getQuantityStocksByMaterialId(materialId: String!): [QuantityStock]
+    getQuantityStocksByProductName(productName: String!): [QuantityStock]
+    getLowStockItems(threshold: Int): [QuantityStock]
   }
 
   # Mutation root
@@ -164,12 +179,11 @@ const typeDefs = gql`
 
     # Quantity Stock mutations
     createQuantityStock(input: QuantityStockInput!): QuantityStock
-    updateQuantityStock(id: ID!, usedQuantity: Float!, notes: String): QuantityStock
+    updateQuantityStock(id: ID!, quantity: Int!, reorderPoint: Int, status: QuantityStockStatus): QuantityStock
     deleteQuantityStock(id: ID!): GenericResponse
-    createBatchQuantityStocks(stocks: [QuantityStockInput!]!): [QuantityStock]
+    updateQuantityStockStatus(id: ID!, status: QuantityStockStatus!): QuantityStock
+    adjustQuantityStock(id: ID!, adjustmentQuantity: Int!, notes: String): QuantityStock
   }
-
-
 `;
 
 // Create executable schema

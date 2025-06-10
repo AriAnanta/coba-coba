@@ -46,7 +46,13 @@ import ProductionPlanDetail from "./pages/planning/ProductionPlanDetail";
 import ProductionPlanForm from "./pages/planning/ProductionPlanForm";
 
 // Production Feedback Pages
-import { FeedbackList, ProductionFeedbackForm, EditProductionFeedbackForm } from "./pages/production-feedback";
+import { 
+  FeedbackList, 
+  ProductionFeedbackForm, 
+  EditProductionFeedbackForm,
+  QuantityStockList,
+  QuantityStockForm 
+} from "./pages/production-feedback";
 
 // User Management Pages
 import UserManagement from "./pages/user/UserManagement";
@@ -146,6 +152,11 @@ function App() {
             <Route path="/feedback" element={<FeedbackList />} />
             <Route path="/feedback/create" element={<ProductionFeedbackForm />} />
             <Route path="/feedback/edit/:id" element={<EditProductionFeedbackForm />} />
+            
+            {/* Quantity Stock Routes */}
+            <Route path="/feedback/quantity-stock" element={<QuantityStockList />} />
+            <Route path="/feedback/quantity-stock/create" element={<QuantityStockForm />} />
+            <Route path="/feedback/quantity-stock/edit/:id" element={<QuantityStockForm />} />
            
             {/* User Management Routes */}
             <Route path="/users" element={<UserManagement />} />
