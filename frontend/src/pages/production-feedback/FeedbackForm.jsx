@@ -1,578 +1,554 @@
-// import React, { useState, useEffect } from "react";
-// import { useNavigate, useParams } from "react-router-dom";
-// import {
-//   Box,
-//   Typography,
-//   Button,
-//   CircularProgress,
-//   Alert,
-//   Paper,
-//   Grid,
-//   TextField,
-//   FormControl,
-//   InputLabel,
-//   Select,
-//   MenuItem,
-//   Divider,
-//   IconButton,
-//   Tooltip,
-//   Slider,
-//   Stack,
-//   Card,
-//   CardContent,
-//   CardHeader,
-//   Avatar,
-//   Dialog,
-//   DialogActions,
-//   DialogContent,
-//   DialogContentText,
-//   DialogTitle,
-// } from "@mui/material";
-// import AdapterDateFns from "@mui/x-date-pickers/AdapterDateFnsV3";
-// import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
-// import {
-//   ArrowBack as ArrowBackIcon,
-//   Save as SaveIcon,
-//   Cancel as CancelIcon,
-//   Delete as DeleteIcon,
-//   Assignment as AssignmentIcon,
-//   Factory as FactoryIcon,
-//   Category as ProductIcon,
-//   ShoppingCart as MarketplaceIcon,
-//   Note as NoteIcon,
-// } from "@mui/icons-material";
-// import feedbackService from "../../api/feedbackService";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Alert,
+  Paper,
+  Grid,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Divider,
+  IconButton,
+  Tooltip,
+  Slider,
+  Stack,
+  Card,
+  CardContent,
+  CardHeader,
+  Avatar,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  FormHelperText,
+} from "@mui/material";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
+import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
+import {
+  ArrowBack as ArrowBackIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Delete as DeleteIcon,
+  Assignment as AssignmentIcon,
+  Factory as FactoryIcon,
+  Category as ProductIcon,
+  ShoppingCart as MarketplaceIcon,
+  Note as NoteIcon,
+} from "@mui/icons-material";
+import { useQuery, useMutation } from "@apollo/client";
+import {
+  GET_FEEDBACK,
+  CREATE_FEEDBACK,
+  UPDATE_FEEDBACK,
+  DELETE_FEEDBACK,
+} from "../../graphql/productionFeedback";
+import { toast } from "react-toastify";
 
-// const FeedbackForm = () => {
-//   const { id } = useParams();
-//   const navigate = useNavigate();
-//   const isEditMode = Boolean(id);
-//   const [loading, setLoading] = useState(isEditMode);
-//   const [submitting, setSubmitting] = useState(false);
-//   const [error, setError] = useState(null);
-//   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-//   const [formData, setFormData] = useState({
-//     feedbackId: "",
-//     productionId: "",
-//     batchId: "",
-//     productId: "",
-//     status: "pending",
-//     startDate: null,
-//     endDate: null,
-//     expectedQuantity: "",
-//     actualQuantity: "",
-//     defectiveQuantity: "",
-//     completionPercentage: 0,
-//     qualityScore: "",
-//     notes: "",
-//     marketplaceUpdateStatus: "not_required",
-//   });
+const FeedbackForm = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditMode = Boolean(id);
 
-//   useEffect(() => {
-//     if (isEditMode) {
-//       fetchFeedbackDetails();
-//     }
-//   }, [id]);
+  const [formData, setFormData] = useState({
+    productName: "",
+    productionPlanId: "",
+    status: "pending",
+    plannedQuantity: 0,
+    actualQuantity: 0,
+    defectQuantity: 0,
+    startDate: null,
+    endDate: null,
+    notes: "",
+  });
 
-//   const fetchFeedbackDetails = async () => {
-//     try {
-//       setLoading(true);
-//       setError(null);
-//       const response = await feedbackService.getFeedbackById(id);
-//       const feedbackData = response.data || response;
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-//       // Format dates for form inputs
-//       const formattedData = {
-//         ...feedbackData,
-//         startDate: feedbackData.startDate
-//           ? new Date(feedbackData.startDate)
-//           : null,
-//         endDate: feedbackData.endDate ? new Date(feedbackData.endDate) : null,
-//       };
+  const {
+    loading: queryLoading,
+    error: queryError,
+    data: queryData,
+  } = useQuery(GET_FEEDBACK, {
+    variables: { id },
+    skip: !isEditMode,
+    fetchPolicy: "network-only",
+  });
 
-//       setFormData(formattedData);
-//     } catch (err) {
-//       setError("Failed to fetch feedback details.");
-//       console.error("Error fetching feedback details:", err);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  const [createFeedbackMutation] = useMutation(CREATE_FEEDBACK, {
+    onCompleted: (data) => {
+      toast.success("Feedback produksi berhasil dibuat!");
+      navigate(`/feedback/${data.createFeedback.id}`);
+      setSubmitting(false);
+    },
+    onError: (err) => {
+      toast.error(`Gagal membuat feedback produksi: ${err.message}`);
+      setSubmitting(false);
+    },
+  });
 
-//   const handleInputChange = (e) => {
-//     const { name, value } = e.target;
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: value,
-//     }));
-//   };
+  const [updateFeedbackMutation] = useMutation(UPDATE_FEEDBACK, {
+    onCompleted: (data) => {
+      toast.success("Feedback produksi berhasil diperbarui!");
+      navigate(`/feedback/${data.updateFeedback.id}`);
+      setSubmitting(false);
+    },
+    onError: (err) => {
+      toast.error(`Gagal memperbarui feedback produksi: ${err.message}`);
+      setSubmitting(false);
+    },
+    refetchQueries: [{ query: GET_FEEDBACK, variables: { id } }],
+  });
 
-//   const handleDateChange = (name, date) => {
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: date,
-//     }));
-//   };
+  const [deleteFeedbackMutation] = useMutation(DELETE_FEEDBACK, {
+    onCompleted: () => {
+      toast.success("Feedback produksi berhasil dihapus!");
+      navigate("/feedback");
+      setDeleteDialogOpen(false);
+    },
+    onError: (err) => {
+      toast.error(`Gagal menghapus feedback produksi: ${err.message}`);
+      setDeleteDialogOpen(false);
+    },
+  });
 
-//   const handleSliderChange = (event, newValue) => {
-//     setFormData((prev) => ({
-//       ...prev,
-//       completionPercentage: newValue,
-//     }));
-//   };
+  useEffect(() => {
+    if (isEditMode && queryData && queryData.feedback) {
+      const { feedback } = queryData;
+      setFormData({
+        productName: feedback.productName || "",
+        productionPlanId: feedback.productionPlanId || "",
+        status: feedback.status || "pending",
+        plannedQuantity: feedback.plannedQuantity || 0,
+        actualQuantity: feedback.actualQuantity || 0,
+        defectQuantity: feedback.defectQuantity || 0,
+        startDate: feedback.startDate ? new Date(feedback.startDate) : null,
+        endDate: feedback.endDate ? new Date(feedback.endDate) : null,
+        notes: feedback.notes || "",
+      });
+    }
+  }, [isEditMode, queryData]);
 
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     try {
-//       setSubmitting(true);
-//       setError(null);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
 
-//       // Prepare data for submission
-//       const submissionData = {
-//         ...formData,
-//         expectedQuantity: formData.expectedQuantity
-//           ? parseInt(formData.expectedQuantity)
-//           : null,
-//         actualQuantity: formData.actualQuantity
-//           ? parseInt(formData.actualQuantity)
-//           : null,
-//         defectiveQuantity: formData.defectiveQuantity
-//           ? parseInt(formData.defectiveQuantity)
-//           : null,
-//         qualityScore: formData.qualityScore
-//           ? parseInt(formData.qualityScore)
-//           : null,
-//       };
+  const handleDateChange = (name, date) => {
+    setFormData((prev) => ({ ...prev, [name]: date }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
 
-//       if (isEditMode) {
-//         await feedbackService.updateFeedback(id, submissionData);
-//         navigate(`/feedback/${id}`, {
-//           state: { message: "Feedback updated successfully" },
-//         });
-//       } else {
-//         const response = await feedbackService.createFeedback(submissionData);
-//         const newId = response.data?.id || response.id;
-//         navigate(`/feedback/${newId}`, {
-//           state: { message: "Feedback created successfully" },
-//         });
-//       }
-//     } catch (err) {
-//       setError(
-//         `Failed to ${isEditMode ? "update" : "create"} feedback. ${err.message}`
-//       );
-//       console.error(
-//         `Error ${isEditMode ? "updating" : "creating"} feedback:`,
-//         err
-//       );
-//     } finally {
-//       setSubmitting(false);
-//     }
-//   };
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.productName.trim()) {
+      newErrors.productName = "Nama Produk wajib diisi.";
+    }
+    if (formData.plannedQuantity && isNaN(parseInt(formData.plannedQuantity))) {
+      newErrors.plannedQuantity = "Kuantitas Terencana harus berupa angka.";
+    }
+    if (formData.actualQuantity && isNaN(parseInt(formData.actualQuantity))) {
+      newErrors.actualQuantity = "Kuantitas Aktual harus berupa angka.";
+    }
+    if (formData.defectQuantity && isNaN(parseInt(formData.defectQuantity))) {
+      newErrors.defectQuantity = "Kuantitas Cacat harus berupa angka.";
+    }
+    if (
+      formData.startDate &&
+      formData.endDate &&
+      formData.startDate > formData.endDate
+    ) {
+      newErrors.endDate = "Tanggal Selesai tidak boleh sebelum Tanggal Mulai.";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-//   const handleCancel = () => {
-//     if (isEditMode) {
-//       navigate(`/feedback/${id}`);
-//     } else {
-//       navigate("/feedback");
-//     }
-//   };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      toast.error("Mohon perbaiki kesalahan formulir.");
+      return;
+    }
 
-//   const handleDeleteClick = () => {
-//     setDeleteDialogOpen(true);
-//   };
+    setSubmitting(true);
+    const input = {
+      productName: formData.productName,
+      productionPlanId: formData.productionPlanId,
+      status: formData.status,
+      plannedQuantity: parseInt(formData.plannedQuantity),
+      actualQuantity: parseInt(formData.actualQuantity),
+      defectQuantity: parseInt(formData.defectQuantity),
+      startDate: formData.startDate
+        ? formData.startDate.toISOString().split("T")[0]
+        : undefined,
+      endDate: formData.endDate
+        ? formData.endDate.toISOString().split("T")[0]
+        : undefined,
+      notes: formData.notes || undefined,
+    };
 
-//   const handleDeleteConfirm = async () => {
-//     try {
-//       await feedbackService.deleteFeedback(id);
-//       setDeleteDialogOpen(false);
-//       navigate("/feedback", {
-//         state: { message: "Feedback deleted successfully" },
-//       });
-//     } catch (err) {
-//       setError("Failed to delete feedback.");
-//       console.error("Error deleting feedback:", err);
-//       setDeleteDialogOpen(false);
-//     }
-//   };
+    try {
+      if (isEditMode) {
+        await updateFeedbackMutation({ variables: { id, input } });
+      } else {
+        await createFeedbackMutation({ variables: { input } });
+      }
+    } catch (err) {
+      // Error ditangani di onError mutation
+    }
+  };
 
-//   const handleDeleteCancel = () => {
-//     setDeleteDialogOpen(false);
-//   };
+  const handleCancel = () => {
+    navigate("/feedback");
+  };
 
-//   if (loading) {
-//     return (
-//       <Box
-//         display="flex"
-//         justifyContent="center"
-//         alignItems="center"
-//         minHeight="400px"
-//       >
-//         <CircularProgress size={60} thickness={4} />
-//       </Box>
-//     );
-//   }
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
 
-//   return (
-//     <Box sx={{ p: 3 }}>
-//       <Box
-//         sx={{
-//           display: "flex",
-//           justifyContent: "space-between",
-//           alignItems: "center",
-//           mb: 3,
-//         }}
-//       >
-//         <Button
-//           startIcon={<ArrowBackIcon />}
-//           onClick={() => navigate("/feedback")}
-//         >
-//           Back to Feedback List
-//         </Button>
-//         {isEditMode && (
-//           <Button
-//             variant="outlined"
-//             color="error"
-//             startIcon={<DeleteIcon />}
-//             onClick={handleDeleteClick}
-//           >
-//             Delete
-//           </Button>
-//         )}
-//       </Box>
+  const handleDeleteConfirm = () => {
+    deleteFeedbackMutation({ variables: { id } });
+  };
 
-//       <Paper sx={{ p: 3, mb: 3 }}>
-//         <Typography variant="h4" component="h1" gutterBottom>
-//           {isEditMode ? "Edit Feedback" : "Create New Feedback"}
-//         </Typography>
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+  };
 
-//         {error && (
-//           <Alert severity="error" sx={{ mb: 3 }}>
-//             {error}
-//           </Alert>
-//         )}
+  if (queryLoading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-//         <form onSubmit={handleSubmit}>
-//           <Grid container spacing={3}>
-//             <Grid item xs={12} md={6}>
-//               <Card variant="outlined" sx={{ mb: 2 }}>
-//                 <CardHeader
-//                   title="Basic Information"
-//                   avatar={
-//                     <Avatar sx={{ bgcolor: "primary.main" }}>
-//                       <AssignmentIcon />
-//                     </Avatar>
-//                   }
-//                 />
-//                 <Divider />
-//                 <CardContent>
-//                   <Grid container spacing={2}>
-//                     <Grid item xs={12}>
-//                       <TextField
-//                         required
-//                         fullWidth
-//                         label="Feedback ID"
-//                         name="feedbackId"
-//                         value={formData.feedbackId}
-//                         onChange={handleInputChange}
-//                         disabled={isEditMode}
-//                         helperText={
-//                           isEditMode
-//                             ? "Feedback ID cannot be changed"
-//                             : "Enter a unique identifier for this feedback"
-//                         }
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12}>
-//                       <TextField
-//                         required
-//                         fullWidth
-//                         label="Production ID"
-//                         name="productionId"
-//                         value={formData.productionId}
-//                         onChange={handleInputChange}
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12} sm={6}>
-//                       <TextField
-//                         required
-//                         fullWidth
-//                         label="Batch ID"
-//                         name="batchId"
-//                         value={formData.batchId}
-//                         onChange={handleInputChange}
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12} sm={6}>
-//                       <TextField
-//                         required
-//                         fullWidth
-//                         label="Product ID"
-//                         name="productId"
-//                         value={formData.productId}
-//                         onChange={handleInputChange}
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12}>
-//                       <FormControl fullWidth required>
-//                         <InputLabel id="status-label">Status</InputLabel>
-//                         <Select
-//                           labelId="status-label"
-//                           id="status"
-//                           name="status"
-//                           value={formData.status}
-//                           label="Status"
-//                           onChange={handleInputChange}
-//                         >
-//                           <MenuItem value="pending">Pending</MenuItem>
-//                           <MenuItem value="in_progress">In Progress</MenuItem>
-//                           <MenuItem value="completed">Completed</MenuItem>
-//                           <MenuItem value="issue">Issue</MenuItem>
-//                         </Select>
-//                       </FormControl>
-//                     </Grid>
-//                   </Grid>
-//                 </CardContent>
-//               </Card>
+  if (queryError) {
+    return (
+      <Alert severity="error" sx={{ mt: 2 }}>
+        Gagal memuat detail feedback: {queryError.message}
+      </Alert>
+    );
+  }
 
-//               <Card variant="outlined">
-//                 <CardHeader
-//                   title="Production Details"
-//                   avatar={
-//                     <Avatar sx={{ bgcolor: "secondary.main" }}>
-//                       <FactoryIcon />
-//                     </Avatar>
-//                   }
-//                 />
-//                 <Divider />
-//                 <CardContent>
-//                   <Grid container spacing={2}>
-//                     <Grid item xs={12} sm={6}>
-//                       <LocalizationProvider dateAdapter={AdapterDateFns}>
-//                         <DatePicker
-//                           label="Start Date"
-//                           value={formData.startDate}
-//                           onChange={(date) =>
-//                             handleDateChange("startDate", date)
-//                           }
-//                           slotProps={{
-//                             textField: {
-//                               fullWidth: true,
-//                               variant: "outlined",
-//                             },
-//                           }}
-//                         />
-//                       </LocalizationProvider>
-//                     </Grid>
-//                     <Grid item xs={12} sm={6}>
-//                       <LocalizationProvider dateAdapter={AdapterDateFns}>
-//                         <DatePicker
-//                           label="End Date"
-//                           value={formData.endDate}
-//                           onChange={(date) => handleDateChange("endDate", date)}
-//                           slotProps={{
-//                             textField: {
-//                               fullWidth: true,
-//                               variant: "outlined",
-//                             },
-//                           }}
-//                         />
-//                       </LocalizationProvider>
-//                     </Grid>
-//                     <Grid item xs={12}>
-//                       <Typography id="completion-slider-label" gutterBottom>
-//                         Completion Percentage: {formData.completionPercentage}%
-//                       </Typography>
-//                       <Slider
-//                         aria-labelledby="completion-slider-label"
-//                         value={formData.completionPercentage}
-//                         onChange={handleSliderChange}
-//                         valueLabelDisplay="auto"
-//                         step={5}
-//                         marks
-//                         min={0}
-//                         max={100}
-//                       />
-//                     </Grid>
-//                   </Grid>
-//                 </CardContent>
-//               </Card>
-//             </Grid>
+  return (
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Box sx={{ p: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Button startIcon={<ArrowBackIcon />} onClick={handleCancel}>
+            Kembali ke Daftar Feedback
+          </Button>
+          {isEditMode && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={handleDeleteClick}
+              disabled={submitting}
+            >
+              Hapus
+            </Button>
+          )}
+        </Box>
 
-//             <Grid item xs={12} md={6}>
-//               <Card variant="outlined" sx={{ mb: 2 }}>
-//                 <CardHeader
-//                   title="Quality Information"
-//                   avatar={
-//                     <Avatar sx={{ bgcolor: "success.main" }}>
-//                       <AssignmentIcon />
-//                     </Avatar>
-//                   }
-//                 />
-//                 <Divider />
-//                 <CardContent>
-//                   <Grid container spacing={2}>
-//                     <Grid item xs={12} sm={6}>
-//                       <TextField
-//                         fullWidth
-//                         label="Expected Quantity"
-//                         name="expectedQuantity"
-//                         type="number"
-//                         value={formData.expectedQuantity}
-//                         onChange={handleInputChange}
-//                         inputProps={{ min: 0 }}
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12} sm={6}>
-//                       <TextField
-//                         fullWidth
-//                         label="Actual Quantity"
-//                         name="actualQuantity"
-//                         type="number"
-//                         value={formData.actualQuantity}
-//                         onChange={handleInputChange}
-//                         inputProps={{ min: 0 }}
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12} sm={6}>
-//                       <TextField
-//                         fullWidth
-//                         label="Defective Quantity"
-//                         name="defectiveQuantity"
-//                         type="number"
-//                         value={formData.defectiveQuantity}
-//                         onChange={handleInputChange}
-//                         inputProps={{ min: 0 }}
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12} sm={6}>
-//                       <TextField
-//                         fullWidth
-//                         label="Quality Score (0-10)"
-//                         name="qualityScore"
-//                         type="number"
-//                         value={formData.qualityScore}
-//                         onChange={handleInputChange}
-//                         inputProps={{ min: 0, max: 10 }}
-//                         helperText="Rate the quality from 0 to 10"
-//                       />
-//                     </Grid>
-//                     <Grid item xs={12}>
-//                       <FormControl fullWidth>
-//                         <InputLabel id="marketplace-status-label">
-//                           Marketplace Update Status
-//                         </InputLabel>
-//                         <Select
-//                           labelId="marketplace-status-label"
-//                           id="marketplaceUpdateStatus"
-//                           name="marketplaceUpdateStatus"
-//                           value={formData.marketplaceUpdateStatus}
-//                           label="Marketplace Update Status"
-//                           onChange={handleInputChange}
-//                         >
-//                           <MenuItem value="pending">Pending</MenuItem>
-//                           <MenuItem value="updated">Updated</MenuItem>
-//                           <MenuItem value="not_required">Not Required</MenuItem>
-//                         </Select>
-//                       </FormControl>
-//                     </Grid>
-//                   </Grid>
-//                 </CardContent>
-//               </Card>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            {isEditMode
+              ? "Edit Feedback Produksi"
+              : "Buat Feedback Produksi Baru"}
+          </Typography>
 
-//               <Card variant="outlined">
-//                 <CardHeader
-//                   title="Notes"
-//                   avatar={
-//                     <Avatar sx={{ bgcolor: "info.main" }}>
-//                       <NoteIcon />
-//                     </Avatar>
-//                   }
-//                 />
-//                 <Divider />
-//                 <CardContent>
-//                   <TextField
-//                     fullWidth
-//                     label="Notes"
-//                     name="notes"
-//                     multiline
-//                     rows={4}
-//                     value={formData.notes}
-//                     onChange={handleInputChange}
-//                     placeholder="Enter any additional notes or comments about this feedback"
-//                   />
-//                 </CardContent>
-//               </Card>
-//             </Grid>
+          <Divider sx={{ my: 2 }} />
 
-//             <Grid item xs={12}>
-//               <Divider sx={{ my: 2 }} />
-//               <Box
-//                 sx={{
-//                   display: "flex",
-//                   justifyContent: "flex-end",
-//                   gap: 2,
-//                   mt: 2,
-//                 }}
-//               >
-//                 <Button
-//                   variant="outlined"
-//                   startIcon={<CancelIcon />}
-//                   onClick={handleCancel}
-//                   disabled={submitting}
-//                 >
-//                   Cancel
-//                 </Button>
-//                 <Button
-//                   type="submit"
-//                   variant="contained"
-//                   color="primary"
-//                   startIcon={<SaveIcon />}
-//                   disabled={submitting}
-//                 >
-//                   {submitting ? (
-//                     <CircularProgress size={24} />
-//                   ) : isEditMode ? (
-//                     "Update Feedback"
-//                   ) : (
-//                     "Create Feedback"
-//                   )}
-//                 </Button>
-//               </Box>
-//             </Grid>
-//           </Grid>
-//         </form>
-//       </Paper>
+          <form onSubmit={handleSubmit}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined" sx={{ mb: 2 }}>
+                  <CardHeader
+                    title="Informasi Dasar"
+                    avatar={
+                      <Avatar sx={{ bgcolor: "primary.main" }}>
+                        <AssignmentIcon />
+                      </Avatar>
+                    }
+                  />
+                  <Divider />
+                  <CardContent>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Product Name"
+                          name="productName"
+                          value={formData.productName}
+                          onChange={(e) =>
+                            handleInputChange("productName", e.target.value)
+                          }
+                          error={!!errors.productName}
+                          helperText={errors.productName}
+                          fullWidth
+                          margin="normal"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <FormControl
+                          fullWidth
+                          margin="normal"
+                          error={!!errors.status}
+                        >
+                          <InputLabel id="status-label">Status</InputLabel>
+                          <Select
+                            labelId="status-label"
+                            id="status"
+                            name="status"
+                            value={formData.status}
+                            label="Status"
+                            onChange={(e) =>
+                              handleInputChange("status", e.target.value)
+                            }
+                          >
+                            <MenuItem value="pending">Pending</MenuItem>
+                            <MenuItem value="in_production">
+                              Dalam Produksi
+                            </MenuItem>
+                            <MenuItem value="on_hold">Ditunda</MenuItem>
+                            <MenuItem value="completed">Selesai</MenuItem>
+                            <MenuItem value="cancelled">Dibatalkan</MenuItem>
+                            <MenuItem value="rejected">Ditolak</MenuItem>
+                          </Select>
+                          {errors.status && (
+                            <FormHelperText>{errors.status}</FormHelperText>
+                          )}
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
 
-//       {/* Delete Confirmation Dialog */}
-//       <Dialog
-//         open={deleteDialogOpen}
-//         onClose={handleDeleteCancel}
-//         aria-labelledby="alert-dialog-title"
-//         aria-describedby="alert-dialog-description"
-//       >
-//         <DialogTitle id="alert-dialog-title">
-//           Confirm Feedback Deletion
-//         </DialogTitle>
-//         <DialogContent>
-//           <DialogContentText id="alert-dialog-description">
-//             Are you sure you want to delete this feedback? This action cannot be
-//             undone.
-//           </DialogContentText>
-//         </DialogContent>
-//         <DialogActions>
-//           <Button onClick={handleDeleteCancel}>Cancel</Button>
-//           <Button
-//             onClick={handleDeleteConfirm}
-//             color="error"
-//             variant="contained"
-//             autoFocus
-//           >
-//             Delete
-//           </Button>
-//         </DialogActions>
-//       </Dialog>
-//     </Box>
-//   );
-// };
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined" sx={{ mb: 2 }}>
+                  <CardHeader
+                    title="Detail Kuantitas & Tanggal"
+                    avatar={
+                      <Avatar sx={{ bgcolor: "secondary.main" }}>
+                        <FactoryIcon />
+                      </Avatar>
+                    }
+                  />
+                  <Divider />
+                  <CardContent>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Planned Quantity"
+                          name="plannedQuantity"
+                          type="number"
+                          value={formData.plannedQuantity}
+                          onChange={(e) =>
+                            handleInputChange("plannedQuantity", e.target.value)
+                          }
+                          error={!!errors.plannedQuantity}
+                          helperText={errors.plannedQuantity}
+                          inputProps={{ min: 0 }}
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: 2,
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Actual Quantity"
+                          name="actualQuantity"
+                          type="number"
+                          value={formData.actualQuantity}
+                          onChange={(e) =>
+                            handleInputChange("actualQuantity", e.target.value)
+                          }
+                          error={!!errors.actualQuantity}
+                          helperText={errors.actualQuantity}
+                          inputProps={{ min: 0 }}
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: 2,
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Defect Quantity"
+                          name="defectQuantity"
+                          type="number"
+                          value={formData.defectQuantity}
+                          onChange={(e) =>
+                            handleInputChange("defectQuantity", e.target.value)
+                          }
+                          error={!!errors.defectQuantity}
+                          helperText={errors.defectQuantity}
+                          inputProps={{ min: 0 }}
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: 2,
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <DatePicker
+                          label="Start Date"
+                          value={formData.startDate}
+                          onChange={(date) =>
+                            handleDateChange("startDate", date)
+                          }
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              variant: "outlined",
+                              error: !!errors.startDate,
+                              helperText: errors.startDate,
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <DatePicker
+                          label="End Date"
+                          value={formData.endDate}
+                          onChange={(date) => handleDateChange("endDate", date)}
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              variant: "outlined",
+                              error: !!errors.endDate,
+                              helperText: errors.endDate,
+                            },
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
 
-// export default FeedbackForm;
+                <Card variant="outlined">
+                  <CardHeader
+                    title="Catatan"
+                    avatar={
+                      <Avatar sx={{ bgcolor: "info.main" }}>
+                        <NoteIcon />
+                      </Avatar>
+                    }
+                  />
+                  <Divider />
+                  <CardContent>
+                    <TextField
+                      fullWidth
+                      label="Catatan"
+                      name="notes"
+                      multiline
+                      rows={4}
+                      value={formData.notes}
+                      onChange={(e) =>
+                        handleInputChange("notes", e.target.value)
+                      }
+                      placeholder="Masukkan catatan tambahan mengenai feedback ini"
+                    />
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 2,
+                    mt: 2,
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    startIcon={<CancelIcon />}
+                    onClick={handleCancel}
+                    disabled={submitting}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    startIcon={<SaveIcon />}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <CircularProgress size={24} />
+                    ) : isEditMode ? (
+                      "Perbarui Feedback"
+                    ) : (
+                      "Buat Feedback"
+                    )}
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </form>
+        </Paper>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleDeleteCancel}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">
+            Konfirmasi Penghapusan Feedback
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Anda yakin ingin menghapus feedback ini? Tindakan ini tidak dapat
+              dibatalkan.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDeleteCancel}>Batal</Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              color="error"
+              variant="contained"
+              autoFocus
+            >
+              Hapus
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </LocalizationProvider>
+  );
+};
+
+export default FeedbackForm;

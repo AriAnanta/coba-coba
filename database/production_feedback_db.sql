@@ -9,6 +9,7 @@ USE production_feedback_db;
 -- Drop existing tables
 DROP TABLE IF EXISTS production_feedbacks;
 DROP TABLE IF EXISTS feedback_notifications;
+DROP TABLE IF EXISTS quantity_stock;
 
 -- Production feedbacks table
 CREATE TABLE production_feedbacks (
@@ -45,3 +46,16 @@ CREATE TABLE feedback_notifications (
     INDEX idx_feedback (feedback_id),
     INDEX idx_type (type)
 );
+
+-- Quantity Stock table
+CREATE TABLE quantity_stock (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    product_name VARCHAR(100) NOT NULL,
+    quantity INT NOT NULL,
+    reorder_point INT,
+    status ENUM('received', 'cancelled', 'in_transit', 'returned') NOT NULL DEFAULT 'received',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_product_name (product_name)
+);
+

@@ -186,9 +186,9 @@ const MainLayout = () => {
               path: "/feedback",
             },
             {
-              text: "Quality Checks",
-              icon: <AssignmentIcon />,
-              path: "/quality-checks",
+              text: "Consumer Status",
+              icon: <SettingsIcon />,
+              path: "/feedback/consumer-status",
             },
           ],
         },

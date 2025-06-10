@@ -23,7 +23,7 @@ function checkAndInstallDependencies() {
   console.log("\x1b[1m===== MENGECEK DEPENDENCIES =====\x1b[0m");
 
   for (const service of services) {
-    const serviceDir = path.join(__dirname, service.name);
+    const serviceDir = path.join(__dirname, "backend", service.name);
     const nodeModulesPath = path.join(serviceDir, "node_modules");
 
     if (!fs.existsSync(nodeModulesPath)) {
@@ -54,7 +54,7 @@ function checkAndInstallDependencies() {
 
 // Fungsi untuk menjalankan layanan
 function startService(service) {
-  const serviceDir = path.join(__dirname, service.name);
+  const serviceDir = path.join(__dirname, "backend", service.name);
 
   // Periksa apakah direktori layanan ada
   if (!fs.existsSync(serviceDir)) {

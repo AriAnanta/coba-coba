@@ -7,10 +7,10 @@
     "start": "node start-services.js",
     "start-all": "node start-services.js",
     "dev": "nodemon start-services.js",
-    "install-all": "node -e \"const { execSync } = require('child_process'); const services = ['user_service', 'production_management', 'production_planning', 'machine_queue', 'material_inventory', 'production_feedback']; services.forEach(dir => { console.log('Installing dependencies for ' + dir + '...'); try { execSync('cd ' + dir + ' && npm install', {stdio: 'inherit'}); console.log(dir + ' dependencies installed successfully'); } catch(e) { console.error('Failed to install dependencies for ' + dir + ':', e.message); } });\"",
+    "install-all": "node -e \"const { execSync } = require('child_process'); const services = ['user_service', 'production_management', 'production_planning', 'machine_queue', 'material_inventory', 'production_feedback']; services.forEach(dir => { console.log('Installing dependencies for ' + dir + '...'); try { execSync('cd backend/' + dir + ' && npm install', {stdio: 'inherit'}); console.log(dir + ' dependencies installed successfully'); } catch(e) { console.error('Failed to install dependencies for ' + dir + ':', e.message); } });\"",
     "create-services": "node create-services.js",
     "setup": "npm run create-services && npm run install-all && echo \"Setup completed. Run 'npm run start-all' to start all services.\"",
-    "clean": "node -e \"const { execSync } = require('child_process'); const services = ['user_service', 'production_management', 'production_planning', 'machine_queue', 'material_inventory', 'production_feedback']; services.forEach(dir => { try { execSync('cd ' + dir + ' && rm -rf node_modules package-lock.json', {stdio: 'inherit'}); } catch(e) { console.error('Failed to clean ' + dir); } });\"",
+    "clean": "node -e \"const { execSync } = require('child_process'); const services = ['user_service', 'production_management', 'production_planning', 'machine_queue', 'material_inventory', 'production_feedback']; services.forEach(dir => { try { execSync('cd backend/' + dir + ' && rm -rf node_modules package-lock.json', {stdio: 'inherit'}); } catch(e) { console.error('Failed to clean ' + dir); } });\"",
     "test": "echo \"No tests specified\" && exit 0",
     "build": "echo \"Build completed\"",
     "stop": "taskkill /F /IM node.exe || killall node"
@@ -27,6 +27,7 @@
   "author": "Manufacturing Team",
   "license": "ISC",
   "dependencies": {
+    "all": "^0.0.0",
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",

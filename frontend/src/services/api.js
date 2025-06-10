@@ -3,7 +3,7 @@ import axios from "axios";
 // Base URLs for each microservice
 const BASE_URLS = {
   auth: "http://localhost:3002/api",
-  production: "http://localhost:3003/api",
+  production: "http://localhost:5001/api",
   machineQueue: "http://localhost:5003/api",
   materialInventory: "http://localhost:3004/api",
   productionFeedback: "http://localhost:3005/api",
@@ -101,7 +101,7 @@ export const productionApiService = {
 
   // Production batches
   getProductionBatches: (params) =>
-    productionAPI.get("/production-batches", { params }),
+    productionAPI.get("/batches", { params }),
   getProductionBatchById: (id) =>
     productionAPI.get(`/production-batches/${id}`),
   createProductionBatch: (data) =>

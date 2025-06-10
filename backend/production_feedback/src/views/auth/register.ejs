@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #e0f2ff; /* Light blue background */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        color: #333;
+      }
+      .register-container {
+        background-color: #ffffff;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        text-align: center;
+        width: 100%;
+        max-width: 450px;
+      }
+      h1 {
+        color: #2c3e50; /* Dark blue-grey */
+        margin-bottom: 30px;
+        font-size: 2em;
+      }
+      .form-group {
+        margin-bottom: 20px;
+        text-align: left;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #555;
+      }
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        box-sizing: border-box; /* Include padding in width */
+        font-size: 1em;
+      }
+      button {
+        background-color: #28a745; /* Green */
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.1em;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+        width: 100%;
+      }
+      button:hover {
+        background-color: #218838; /* Darker green on hover */
+      }
+      .error-message {
+        color: #d9534f; /* Red */
+        margin-bottom: 15px;
+        font-size: 0.9em;
+      }
+      .login-link {
+        margin-top: 25px;
+        font-size: 0.95em;
+      }
+      .login-link a {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: bold;
+      }
+      .login-link a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="register-container">
+      <h1><%= title %></h1>
+      <% if (error) { %>
+      <p class="error-message"><%= error %></p>
+      <% } %>
+      <form action="/api/auth/register" method="POST">
+        <div class="form-group">
+          <label for="username">Nama Pengguna:</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+        <div class="form-group">
+          <label for="role">Peran:</label>
+          <select id="role" name="role" required>
+            <option value="production_manager">Production Manager</option>
+            <option value="production_operator">Production Operator</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button type="submit">Daftar</button>
+      </form>
+      <p class="login-link">
+        Sudah punya akun? <a href="/login">Login di sini</a>
+      </p>
+    </div>
+  </body>
+</html>
