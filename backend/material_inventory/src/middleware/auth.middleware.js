@@ -53,6 +53,32 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware untuk memeriksa peran pengguna
+ * @param {string|string[]} roles - Peran yang diizinkan untuk mengakses rute
+ */
+const checkRole = (roles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Akses ditolak. Tidak terautentikasi.'
+    });
+  }
+
+  // Konversi roles menjadi array jika string tunggal
+  const allowedRoles = Array.isArray(roles) ? roles : [roles];
+  
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Akses ditolak. Peran tidak mencukupi.'
+    });
+  }
+  
+  next();
+};
+
 module.exports = {
-  verifyToken
+  verifyToken,
+  checkRole
 };

@@ -26,6 +26,16 @@ Object.keys(db).forEach(modelName => {
   }
 });
 
+// Sinkronisasi model dengan database
+// Ini akan membuat tabel jika belum ada
+sequelize.sync({ alter: true })
+  .then(() => {
+    console.log('✅ Database synchronized successfully');
+  })
+  .catch(err => {
+    console.error('❌ Error synchronizing database:', err);
+  });
+
 // Export all models
 module.exports = {
   User,

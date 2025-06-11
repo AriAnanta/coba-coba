@@ -3,8 +3,8 @@
 -- =====================================================
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS user_management_db;
-USE user_management_db;
+CREATE DATABASE IF NOT EXISTS user_service_db;
+USE user_service_db;
 
 -- Drop existing tables
 DROP TABLE IF EXISTS users;

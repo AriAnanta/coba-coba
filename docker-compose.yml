@@ -5,7 +5,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - user_service
       - machine_queue
@@ -19,7 +19,7 @@ services:
 
   # User Service
   user_service:
-    build: ./user_service
+    build: ./backend/user_service
     ports:
       - "5006:5006"
     environment:
@@ -28,7 +28,7 @@ services:
       - DB_HOST=user_db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_PASSWORD=
       - DB_NAME=user_service_db
       - JWT_SECRET=your_jwt_secret_key
     depends_on:
@@ -40,7 +40,7 @@ services:
 
   # Production Management Service
   production_management:
-    build: ./production_management
+    build: ./backend/production_management
     ports:
       - "5001:5001"
     environment:
@@ -49,12 +49,12 @@ services:
       - DB_HOST=production_management_db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_PASSWORD=
       - DB_NAME=production_management_db
       - MATERIAL_INVENTORY_URL=http://material_inventory:5004
       - MACHINE_QUEUE_URL=http://machine_queue:5003
       - FEEDBACK_SERVICE_URL=http://production_feedback:5005
-      - PLANNING_SERVICE_URL=http://production_planning:5002
+      - PLANNING_SERVICE_URL=http://production_planning:5300
       - USER_SERVICE_URL=http://user_service:5006
       - SERVICE_URL=http://frontend:80
     depends_on:
@@ -66,7 +66,7 @@ services:
 
   # Production Planning Service
   production_planning:
-    build: ./production_planning
+    build: ./backend/production_planning
     ports:
       - "5002:5002"
     environment:
@@ -75,7 +75,7 @@ services:
       - DB_HOST=production_planning_db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_PASSWORD=
       - DB_NAME=production_planning_db
     depends_on:
       production_planning_db:
@@ -86,7 +86,7 @@ services:
 
   # Machine Queue Service
   machine_queue:
-    build: ./machine_queue
+    build: ./backend/machine_queue
     ports:
       - "5003:5003"
     environment:
@@ -95,7 +95,7 @@ services:
       - DB_HOST=machine_queue_db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_PASSWORD=
       - DB_NAME=machine_queue_db
     depends_on:
       machine_queue_db:
@@ -106,7 +106,7 @@ services:
 
   # Material Inventory Service
   material_inventory:
-    build: ./material_inventory
+    build: ./backend/material_inventory
     ports:
       - "5004:5004"
     environment:
@@ -115,7 +115,7 @@ services:
       - DB_HOST=material_inventory_db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_PASSWORD=
       - DB_NAME=material_inventory_db
     depends_on:
       material_inventory_db:
@@ -126,7 +126,7 @@ services:
 
   # Production Feedback Service
   production_feedback:
-    build: ./production_feedback
+    build: ./backend/production_feedback
     ports:
       - "5005:5005"
     environment:
@@ -135,7 +135,7 @@ services:
       - DB_HOST=production_feedback_db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=password
+      - DB_PASSWORD=
       - DB_NAME=production_feedback_db
     depends_on:
       production_feedback_db:
@@ -148,8 +148,11 @@ services:
   user_db:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=user_service_db
+    ports:
+      - "3320:3306"
     volumes:
       - ./database/user_service_db.sql:/docker-entrypoint-initdb.d/init.sql
       - user_db_data:/var/lib/mysql
@@ -164,8 +167,11 @@ services:
   production_management_db:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=production_management_db
+    ports:
+      - "3321:3306"
     volumes:
       - ./database/production_management_db.sql:/docker-entrypoint-initdb.d/init.sql
       - production_management_db_data:/var/lib/mysql
@@ -180,8 +186,11 @@ services:
   production_planning_db:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=production_planning_db
+    ports:
+      - "3322:3306"
     volumes:
       - ./database/production_planning_db.sql:/docker-entrypoint-initdb.d/init.sql
       - production_planning_db_data:/var/lib/mysql
@@ -196,8 +205,11 @@ services:
   machine_queue_db:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=machine_queue_db
+    ports:
+      - "3323:3306"
     volumes:
       - ./database/machine_queue_db.sql:/docker-entrypoint-initdb.d/init.sql
       - machine_queue_db_data:/var/lib/mysql
@@ -212,8 +224,11 @@ services:
   material_inventory_db:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=material_inventory_db
+    ports:
+      - "3324:3306"
     volumes:
       - ./database/material_inventory_db.sql:/docker-entrypoint-initdb.d/init.sql
       - material_inventory_db_data:/var/lib/mysql
@@ -228,8 +243,11 @@ services:
   production_feedback_db:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=production_feedback_db
+    ports:
+      - "3325:3306"
     volumes:
       - ./database/production_feedback_db.sql:/docker-entrypoint-initdb.d/init.sql
       - production_feedback_db_data:/var/lib/mysql

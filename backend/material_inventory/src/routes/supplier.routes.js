@@ -6,7 +6,7 @@
 const express = require("express");
 const router = express.Router();
 const supplierController = require("../controllers/supplier.controller");
-const { verifyToken } = require("../../../common/middleware/auth.middleware");
+const { verifyToken } = require("../middleware/auth.middleware");
 
 // Semua routes dilindungi dengan middleware verifikasi token
 // router.use(verifyToken);

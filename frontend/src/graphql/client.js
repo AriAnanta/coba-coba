@@ -31,7 +31,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 const endpoints = {
   userService: "http://localhost:5006/graphql",
   productionManagement: "http://localhost:5001/graphql",
-  productionPlanning: "http://localhost:5300/graphql",
+  productionPlanning: "http://localhost:5002/graphql",
   machineQueue: "http://localhost:5003/graphql",
   materialInventory: "http://localhost:5004/graphql",
   productionFeedback: "http://localhost:5005/graphql",

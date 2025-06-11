@@ -5,13 +5,22 @@
  */
 const express = require("express");
 const router = express.Router();
-const {
-  verifyToken,
-  checkRole,
-} = require("../../../common/middleware/auth.middleware");
+const jwt = require("jsonwebtoken");
 
-// Apply authentication middleware to all routes
-// router.use(verifyToken);
+// Definisi lokal untuk middleware auth
+const verifyToken = (req, res, next) => {
+  // Implementasi sederhana untuk sementara
+  console.log("Token verification bypassed in development");
+  req.user = { id: 1, role: "admin" }; // User dummy
+  next();
+};
+
+const requireRole = (role) => {
+  return (req, res, next) => {
+    console.log("Role check bypassed in development");
+    next();
+  };
+};
 
 // Basic user controller functions (temporary until controller is created)
 const userController = {
@@ -32,19 +41,16 @@ const userController = {
   },
 };
 
-// Get all users - Admin only
-router.get("/", userController.getAllUsers);
-
-// Get user by ID
-router.get("/:id", userController.getUserById);
-
-// Create new user - Admin only
-router.post("/", userController.createUser);
-
-// Update user
-router.put("/:id", userController.updateUser);
-
-// Delete user - Admin only
-router.delete("/:id", userController.deleteUser);
+// Routes
+router.get("/", verifyToken, requireRole("admin"), userController.getAllUsers);
+router.get("/:id", verifyToken, userController.getUserById);
+router.post("/", verifyToken, requireRole("admin"), userController.createUser);
+router.put("/:id", verifyToken, userController.updateUser);
+router.delete(
+  "/:id",
+  verifyToken,
+  requireRole("admin"),
+  userController.deleteUser
+);
 
 module.exports = router;

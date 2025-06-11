@@ -1,3 +1,4 @@
+import React from 'react';
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Box } from "@mui/material";
 import { AuthProvider } from "./contexts/AuthContext";
