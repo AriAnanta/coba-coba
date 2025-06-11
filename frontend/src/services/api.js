@@ -2,10 +2,10 @@ import axios from "axios";
 
 // Base URLs for each microservice
 const BASE_URLS = {
-  auth: "http://localhost:3002/api",
+  auth: "http://localhost:5000/api",
   production: "http://localhost:5001/api",
   machineQueue: "http://localhost:5003/api",
-  materialInventory: "http://localhost:3004/api",
+  materialInventory: "http://localhost:5004/api",
   productionFeedback: "http://localhost:3005/api",
   machineQueueManagement: "http://localhost:5003/api",
 };

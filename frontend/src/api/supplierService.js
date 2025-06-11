@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API_URL =
   import.meta.env.VITE_MATERIAL_INVENTORY_API_URL ||
-  "http://localhost:3002/api";
+  "http://localhost:5004/api";
 
 const supplierService = {
   getAllSuppliers: async () => {
